@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --college-navy: #0f2942;
+    --college-blue: #1d4ed8;
+    --college-slate: #334155;
+    --college-border: #e2e8f0;
+  }
+
+  body {
+    @apply bg-slate-50/80 text-slate-800 min-h-screen antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Restrained, professional utility styles for the college portal */
+@layer components {
+  /* Crisp institutional card */
+  .portal-card {
+    @apply bg-white border border-slate-200/90 rounded-xl shadow-xs;
+  }
+
+  /* Table styling */
+  .portal-table {
+    @apply w-full text-left text-xs text-slate-700 divide-y divide-slate-100;
+  }
+
+  .portal-table thead {
+    @apply bg-slate-50/90 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200;
+  }
+
+  .portal-table th {
+    @apply px-4 py-3;
+  }
+
+  .portal-table td {
+    @apply px-4 py-3.5;
+  }
+
+  /* Form control standard */
+  .portal-input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors;
+  }
+
+  .portal-select {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors;
+  }
+
+  /* Status badge styles with balanced contrast */
+  .badge-emerald {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/80;
+  }
+
+  .badge-amber {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-900 border border-amber-200/90;
+  }
+
+  .badge-slate {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200;
+  }
+
+  .badge-navy {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-900 text-white;
+  }
+
+  .badge-rose {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-rose-50 text-rose-800 border border-rose-200/80;
+  }
+
+  .badge-purple {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-purple-50 text-purple-900 border border-purple-200/80;
+  }
+}
