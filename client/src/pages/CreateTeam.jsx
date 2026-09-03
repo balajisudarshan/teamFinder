@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import { 
-  Users, 
-  PlusCircle, 
-  Award, 
-  AlertTriangle 
+import {
+  Users,
+  PlusCircle,
+  Award,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -80,7 +80,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
-      
+
       {/* Page Header */}
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-['Plus_Jakarta_Sans',sans-serif]">
@@ -93,7 +93,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
 
       {/* Main Form Container */}
       <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs space-y-5">
-        
+
         {/* Error Alert */}
         {error && (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-start gap-2">
@@ -106,7 +106,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          
+
           {/* Hackathon Selection & SIH Note */}
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-slate-700">
@@ -175,7 +175,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
             </label>
             <input
               type="text"
-              name="problemDomain"
+              name="problem Number (PS NUMBER)"
               required
               value={formData.problemDomain}
               onChange={handleChange}
