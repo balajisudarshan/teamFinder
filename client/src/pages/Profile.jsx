@@ -165,18 +165,76 @@ export default function Profile({ onSuccess }) {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="block font-semibold text-slate-700">
-              Technical Skills (comma-separated):
-            </label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-700">
+                Skills & Disciplines (comma-separated):
+              </label>
+              <span className="text-[10px] text-slate-400">Click chips to toggle or type custom</span>
+            </div>
             <input
               type="text"
               name="skills"
               value={formData.skills}
               onChange={handleChange}
-              placeholder="React, Node.js, Python, Flutter, Figma..."
+              placeholder="React, Python, IoT, 3D CAD, UI/UX, Figma..."
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
             />
+            {/* Quick Suggestion Chips */}
+            <div className="pt-1">
+              <div className="flex flex-wrap gap-1">
+                {[
+                  'Web Dev',
+                  'Python',
+                  'C / C++',
+                  'Java',
+                  'Mobile App',
+                  'AI / ML',
+                  'IoT & Arduino',
+                  '3D CAD / SolidWorks',
+                  'Circuit & PCB',
+                  'UI/UX & Figma',
+                  'Pitching & Presentation',
+                  'Documentation'
+                ].map((skill) => {
+                  const currentSkills = formData.skills
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  const isSelected = currentSkills.some(
+                    (s) => s.toLowerCase() === skill.toLowerCase()
+                  );
+
+                  const toggleSkill = () => {
+                    let updated;
+                    if (isSelected) {
+                      updated = currentSkills.filter(
+                        (s) => s.toLowerCase() !== skill.toLowerCase()
+                      );
+                    } else {
+                      updated = [...currentSkills, skill];
+                    }
+                    setFormData((prev) => ({ ...prev, skills: updated.join(', ') }));
+                  };
+
+                  return (
+                    <button
+                      type="button"
+                      key={skill}
+                      onClick={toggleSkill}
+                      className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-slate-900 text-white border-slate-900 font-semibold'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{isSelected ? '✓' : '+'}</span>
+                      <span>{skill}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-1">

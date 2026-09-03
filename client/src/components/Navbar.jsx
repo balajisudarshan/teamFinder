@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import {
   Users,
   PlusCircle,
@@ -8,12 +9,45 @@ import {
   LogOut,
   Menu,
   X,
-  Layers
+  Layers,
+  Bell
 } from 'lucide-react';
 
 export default function Navbar({ activePage, setActivePage }) {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setPendingCount(0);
+      return;
+    }
+
+    const checkPending = async () => {
+      try {
+        const teamsRes = await api.get('/teams/my-teams');
+        if (teamsRes.data?.success) {
+          const lead = teamsRes.data.leadingTeams || [];
+          let total = 0;
+          for (const t of lead) {
+            try {
+              const reqRes = await api.get(`/requests/team/${t._id}`);
+              if (reqRes.data?.success) {
+                const pending = (reqRes.data.requests || []).filter((r) => r.status === 'pending');
+                total += pending.length;
+              }
+            } catch (e) {}
+          }
+          setPendingCount(total);
+        }
+      } catch (err) {
+        // silent catch
+      }
+    };
+
+    checkPending();
+  }, [isAuthenticated, activePage]);
 
   const handleNav = (page) => {
     setActivePage(page);
@@ -93,6 +127,11 @@ export default function Navbar({ activePage, setActivePage }) {
                 >
                   <Users className="w-3.5 h-3.5 text-slate-500" />
                   <span>My Teams</span>
+                  {pendingCount > 0 && (
+                    <span className="px-1.5 py-0.2 text-[10px] font-bold bg-rose-600 text-white rounded-full leading-tight">
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               </>
             )}
@@ -198,10 +237,15 @@ export default function Navbar({ activePage, setActivePage }) {
               </button>
               <button
                 onClick={() => handleNav('my-teams')}
-                className={`w-full text-left px-3 py-2 rounded-md font-medium ${activePage === 'my-teams' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-700'
+                className={`w-full text-left px-3 py-2 rounded-md font-medium flex items-center justify-between ${activePage === 'my-teams' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-700'
                   }`}
               >
-                My Teams & Requests
+                <span>My Teams & Requests</span>
+                {pendingCount > 0 && (
+                  <span className="px-2 py-0.5 text-xs font-bold bg-rose-600 text-white rounded-full">
+                    {pendingCount} pending
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => handleNav('profile')}

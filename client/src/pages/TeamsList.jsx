@@ -90,6 +90,24 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
         )}
       </div>
 
+      {/* Student Guidance Strip */}
+      <div className="bg-slate-100/90 border border-slate-200/80 rounded-lg p-3 text-xs text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base shrink-0">💡</span>
+          <span className="leading-tight">
+            <strong>How to join a team:</strong> 1. Browse open teams or filter by your department ➜ 2. Click <em>Request to Join</em> to introduce yourself ➜ 3. The leader will review and confirm your slot!
+          </span>
+        </div>
+        {!isAuthenticated && (
+          <button
+            onClick={() => setActivePage('register')}
+            className="self-start sm:self-auto text-slate-900 font-semibold underline shrink-0 text-[11px]"
+          >
+            Register with @nbkrist.org
+          </button>
+        )}
+      </div>
+
       {/* Filter Control Box */}
       <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-3.5">
         

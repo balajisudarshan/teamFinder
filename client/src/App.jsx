@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -17,8 +17,23 @@ import AdminDashboard from './pages/AdminDashboard';
 
 function MainApp() {
   const { isAuthenticated, isAdmin } = useAuth();
-  const [activePage, setActivePage] = useState('home');
-  const [selectedTeamId, setSelectedTeamId] = useState(null);
+
+  const parseHash = () => {
+    const raw = window.location.hash.replace(/^#\/?/, '');
+    if (raw.startsWith('team/')) {
+      const id = raw.replace('team/', '');
+      return { page: 'team-details', teamId: id };
+    }
+    const validPages = ['home', 'teams', 'team-details', 'create-team', 'my-teams', 'profile', 'admin', 'login', 'register'];
+    if (validPages.includes(raw)) {
+      return { page: raw, teamId: null };
+    }
+    return { page: 'home', teamId: null };
+  };
+
+  const initial = parseHash();
+  const [activePage, setActivePageState] = useState(initial.page);
+  const [selectedTeamId, setSelectedTeamId] = useState(initial.teamId);
 
   // Global Join Request Modal State
   const [requestTargetTeam, setRequestTargetTeam] = useState(null);
@@ -34,11 +49,32 @@ function MainApp() {
     }, 4500);
   };
 
+  const setActivePage = (page) => {
+    setActivePageState(page);
+    if (page !== 'team-details') {
+      window.location.hash = `#/${page}`;
+    }
+  };
+
   const handleSelectTeam = (team) => {
-    setSelectedTeamId(team._id || team);
-    setActivePage('team-details');
+    const id = team._id || team;
+    setSelectedTeamId(id);
+    setActivePageState('team-details');
+    window.location.hash = `#/team/${id}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseHash();
+      setActivePageState(parsed.page);
+      if (parsed.teamId) {
+        setSelectedTeamId(parsed.teamId);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   const handleTriggerRequest = (team) => {
     if (!isAuthenticated) {

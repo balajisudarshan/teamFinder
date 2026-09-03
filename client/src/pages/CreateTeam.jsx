@@ -169,19 +169,48 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
           </div>
 
           {/* Problem Statement / Domain */}
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">
-              Problem Domain / Theme: *
-            </label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700">
+                Problem Domain / Theme or PS Code: *
+              </label>
+              <span className="text-[10px] text-slate-400">Click a preset or type custom</span>
+            </div>
             <input
               type="text"
-              name="problem Number (PS NUMBER)"
+              name="problemDomain"
               required
               value={formData.problemDomain}
               onChange={handleChange}
-              placeholder="e.g. Smart Education, Clean Energy & EV, Healthcare, Cybersecurity..."
+              placeholder="e.g. Clean Energy & EV, Smart Education, Healthcare, PS1420..."
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
             />
+            {/* Quick Domain Suggestion Chips */}
+            <div className="flex flex-wrap gap-1 pt-1">
+              {[
+                'Smart Education',
+                'Clean Energy & EV',
+                'Healthcare & MedTech',
+                'Agriculture & FoodTech',
+                'Cybersecurity',
+                'IoT & Smart Automation',
+                'Robotics & Drones',
+                'Disaster Management'
+              ].map((domain) => (
+                <button
+                  type="button"
+                  key={domain}
+                  onClick={() => setFormData((prev) => ({ ...prev, problemDomain: domain }))}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                    formData.problemDomain === domain
+                      ? 'bg-slate-900 text-white border-slate-900 font-semibold'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {domain}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Project Description */}
@@ -200,18 +229,79 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
           </div>
 
           {/* Skills Needed */}
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">
-              Skills Needed (comma-separated):
-            </label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700">
+                Skills & Roles Needed (comma-separated):
+              </label>
+              <span className="text-[10px] text-slate-400">Click chips to toggle or type custom</span>
+            </div>
             <input
               type="text"
               name="skillsNeeded"
               value={formData.skillsNeeded}
               onChange={handleChange}
-              placeholder="e.g. React, Flutter, Python, IoT, Embedded C, Figma..."
+              placeholder="e.g. React, Python, IoT, 3D CAD, UI/UX, Pitching..."
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
             />
+            {/* Multi-Discipline Skill & Role Suggestion Chips */}
+            <div className="space-y-1 pt-1 bg-slate-50/70 p-2.5 rounded-lg border border-slate-200/80">
+              <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                <span>Quick Add (Tech & Non-Tech Roles):</span>
+                <span>Includes Core Engineering & Pitching</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  'React / Web',
+                  'Node.js / Backend',
+                  'Python',
+                  'Flutter / Mobile',
+                  'AI / ML',
+                  'IoT / Embedded',
+                  '3D CAD / SolidWorks',
+                  'Circuit Design / PCB',
+                  'UI/UX & Figma',
+                  'Pitching & PPT',
+                  'Technical Documentation'
+                ].map((skill) => {
+                  const currentSkills = formData.skillsNeeded
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  const isSelected = currentSkills.some(
+                    (s) => s.toLowerCase() === skill.toLowerCase()
+                  );
+
+                  const toggleSkill = () => {
+                    let updated;
+                    if (isSelected) {
+                      updated = currentSkills.filter(
+                        (s) => s.toLowerCase() !== skill.toLowerCase()
+                      );
+                    } else {
+                      updated = [...currentSkills, skill];
+                    }
+                    setFormData((prev) => ({ ...prev, skillsNeeded: updated.join(', ') }));
+                  };
+
+                  return (
+                    <button
+                      type="button"
+                      key={skill}
+                      onClick={toggleSkill}
+                      className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-slate-900 text-white border-slate-900 font-semibold'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{isSelected ? '✓' : '+'}</span>
+                      <span>{skill}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Requirements Box */}

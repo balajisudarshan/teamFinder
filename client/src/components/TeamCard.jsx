@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SIHBadge from './SIHBadge';
 import { 
   Users, 
   Crown, 
   ArrowRight, 
   Check, 
-  ChevronRight
+  ChevronRight,
+  Share2,
+  Copy
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
   const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
 
   const membersCount = team.members?.length || 0;
   const maxMembers = team.requiredMembers || 6;
@@ -23,6 +26,26 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
 
   const isLeader = user && (team.leader?._id || team.leader)?.toString() === user._id?.toString();
   const isFull = team.status === 'full' || membersCount >= maxMembers;
+
+  const handleShare = (e) => {
+    e.stopPropagation();
+    const teamUrl = `${window.location.origin}${window.location.pathname}#/team/${team._id}`;
+    const skillsList = team.skillsNeeded?.slice(0, 3).join(', ') || 'Motivated students';
+    const shareText = `🚀 *${team.teamName}* is recruiting teammates for *${team.hackathon}* at NBKRIST!\n🎯 Domain: ${team.problemDomain}\n💡 Looking for: ${skillsList}\n🔗 Apply here: ${teamUrl}`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(teamUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+
+    if (navigator.share) {
+      navigator.share({ title: team.teamName, text: shareText, url: teamUrl }).catch(() => {});
+    } else {
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   return (
     <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl shadow-xs transition-all flex flex-col justify-between overflow-hidden">
@@ -152,13 +175,25 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
 
       {/* Card Footer Actions */}
       <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-2">
-        <button
-          onClick={() => onSelectTeam(team)}
-          className="text-xs font-semibold text-slate-700 hover:text-slate-950 flex items-center gap-1 transition-colors"
-        >
-          <span>Team Details</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onSelectTeam(team)}
+            className="text-xs font-semibold text-slate-700 hover:text-slate-950 flex items-center gap-1 transition-colors"
+          >
+            <span>Team Details</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-md transition-colors flex items-center gap-1 text-[11px]"
+            title="Share via WhatsApp or copy link"
+          >
+            <Share2 className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
+          </button>
+        </div>
 
         {!isMember && !isFull && (
           <button

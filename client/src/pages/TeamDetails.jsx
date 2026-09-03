@@ -9,7 +9,9 @@ import {
   AlertCircle,
   Send,
   Trash2,
-  Check
+  Check,
+  Share2,
+  Copy
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +21,28 @@ export default function TeamDetails({ teamId, onBack, onRequestJoin, setActivePa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    if (!team) return;
+    const teamUrl = `${window.location.origin}${window.location.pathname}#/team/${team._id}`;
+    const skillsList = team.skillsNeeded?.join(', ') || 'Motivated students';
+    const shareText = `🚀 *${team.teamName}* is recruiting teammates for *${team.hackathon}* at NBKRIST!\n🎯 Domain: ${team.problemDomain}\n💡 Required Skills: ${skillsList}\n🔗 View & Apply here: ${teamUrl}`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(teamUrl);
+      setCopied(true);
+      onSuccess && onSuccess('Team link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    }
+
+    if (navigator.share) {
+      navigator.share({ title: team.teamName, text: shareText, url: teamUrl }).catch(() => {});
+    } else {
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const fetchTeam = async () => {
     setLoading(true);
@@ -123,7 +147,16 @@ export default function TeamDetails({ teamId, onBack, onRequestJoin, setActivePa
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              onClick={handleShare}
+              className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold rounded-md shadow-xs transition-colors flex items-center gap-1.5"
+              title="Share via WhatsApp or copy link"
+            >
+              <Share2 className="w-3.5 h-3.5 text-slate-600" />
+              <span>{copied ? 'Link Copied!' : 'Share Team'}</span>
+            </button>
+
             {isLeader ? (
               <div className="flex items-center gap-2">
                 <button
@@ -234,7 +267,7 @@ export default function TeamDetails({ teamId, onBack, onRequestJoin, setActivePa
 
       {/* Official Team Roster Section */}
       <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-base font-bold text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">
               Confirmed Team Members Roster
@@ -243,9 +276,22 @@ export default function TeamDetails({ teamId, onBack, onRequestJoin, setActivePa
               Verified NBKRIST student roll numbers and academic records
             </p>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-800 rounded-md">
-            {team.members?.length || 0} of {team.requiredMembers || 6} Confirmed
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(team.hackathon?.toLowerCase().includes('sih') || team.hackathon?.toLowerCase().includes('smart india')) && (
+              <span className={`text-[11px] font-medium px-2.5 py-1 rounded-md border ${
+                ((team.leader?.gender === 'Female') || team.members?.some((m) => m?.gender === 'Female'))
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                  : 'bg-amber-50 text-amber-900 border-amber-200'
+              }`}>
+                {((team.leader?.gender === 'Female') || team.members?.some((m) => m?.gender === 'Female'))
+                  ? '✓ SIH Female Rule Met' 
+                  : '⚠️ Female Teammate Needed for SIH'}
+              </span>
+            )}
+            <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-800 rounded-md">
+              {team.members?.length || 0} of {team.requiredMembers || 6} Confirmed
+            </span>
+          </div>
         </div>
 
         {/* Member cards grid */}
