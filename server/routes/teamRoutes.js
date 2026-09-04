@@ -10,12 +10,11 @@ const {
   getMyTeams,
 } = require('../controllers/teamController');
 const { protect } = require('../middleware/authMiddleware');
-const { createTeamLimiter } = require('../middleware/rateLimiter');
 const { requireNotFlagged } = require('../middleware/flagCheckMiddleware');
 
 router.route('/')
   .get(getTeams)
-  .post(protect, requireNotFlagged, createTeamLimiter, createTeam);
+  .post(protect, requireNotFlagged, createTeam);
 
 router.get('/my-teams', protect, getMyTeams);
 

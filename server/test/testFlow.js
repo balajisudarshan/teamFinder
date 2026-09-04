@@ -25,9 +25,6 @@ async function runTests() {
   app.use(cors());
   app.use(express.json());
 
-  const { apiLimiter } = require('../middleware/rateLimiter');
-  app.use('/api', apiLimiter);
-
   app.use('/api/auth', authRoutes);
   app.use('/api/teams', teamRoutes);
   app.use('/api/requests', requestRoutes);
