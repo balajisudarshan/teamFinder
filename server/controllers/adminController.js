@@ -39,7 +39,7 @@ const getAdminStats = async (req, res) => {
 // @access  Private (Admin only)
 const getAllStudents = async (req, res) => {
   try {
-    const { search, department, year, gender } = req.query;
+    const { search, department, year, gender, page, limit } = req.query;
 
     let query = { role: 'student' };
 
@@ -65,13 +65,30 @@ const getAllStudents = async (req, res) => {
       ];
     }
 
-    const students = await User.find(query)
+    const total = await User.countDocuments(query);
+
+    let studentsQuery = User.find(query)
       .select('-password')
       .sort({ createdAt: -1 });
+
+    const isPaginationRequested = page !== undefined || limit !== undefined;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = limit === 'all' ? total : Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+
+    if (isPaginationRequested && limit !== 'all') {
+      const skip = (pageNum - 1) * limitNum;
+      studentsQuery = studentsQuery.skip(skip).limit(limitNum);
+    }
+
+    const students = await studentsQuery;
 
     res.json({
       success: true,
       count: students.length,
+      total,
+      page: pageNum,
+      totalPages: isPaginationRequested && limit !== 'all' ? Math.ceil(total / limitNum) || 1 : 1,
+      limit: limitNum,
       students,
     });
   } catch (error) {
@@ -84,7 +101,7 @@ const getAllStudents = async (req, res) => {
 // @access  Private (Admin only)
 const getAllTeams = async (req, res) => {
   try {
-    const { search, hackathon, status } = req.query;
+    const { search, hackathon, status, page, limit } = req.query;
 
     let query = {};
 
@@ -105,14 +122,31 @@ const getAllTeams = async (req, res) => {
       ];
     }
 
-    const teams = await Team.find(query)
+    const total = await Team.countDocuments(query);
+
+    let teamsQuery = Team.find(query)
       .populate('leader', 'name rollNumber email department year gender skills')
       .populate('members', 'name rollNumber email department year gender skills')
       .sort({ createdAt: -1 });
 
+    const isPaginationRequested = page !== undefined || limit !== undefined;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = limit === 'all' ? total : Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+
+    if (isPaginationRequested && limit !== 'all') {
+      const skip = (pageNum - 1) * limitNum;
+      teamsQuery = teamsQuery.skip(skip).limit(limitNum);
+    }
+
+    const teams = await teamsQuery;
+
     res.json({
       success: true,
       count: teams.length,
+      total,
+      page: pageNum,
+      totalPages: isPaginationRequested && limit !== 'all' ? Math.ceil(total / limitNum) || 1 : 1,
+      limit: limitNum,
       teams,
     });
   } catch (error) {
@@ -158,9 +192,82 @@ const exportTeamsExcel = async (req, res) => {
   }
 };
 
+// @desc    Get all applications / join requests for admin
+// @route   GET /api/admin/applications
+// @access  Private (Admin only)
+const getAllApplications = async (req, res) => {
+  try {
+    const { status, search, page, limit } = req.query;
+
+    let query = {};
+    if (status && status !== 'All') {
+      query.status = status.toLowerCase();
+    }
+
+    const applications = await JoinRequest.find(query)
+      .populate('student', 'name rollNumber email department year gender skills bio')
+      .populate({
+        path: 'team',
+        select: 'teamName hackathon problemDomain status leader requiredMembers members',
+        populate: {
+          path: 'leader',
+          select: 'name rollNumber email department',
+        },
+      })
+      .sort({ createdAt: -1 });
+
+    let filtered = applications;
+    if (search && search.trim()) {
+      const s = search.trim().toLowerCase();
+      filtered = applications.filter((app) => {
+        const studentName = app.student?.name?.toLowerCase() || '';
+        const rollNumber = app.student?.rollNumber?.toLowerCase() || '';
+        const email = app.student?.email?.toLowerCase() || '';
+        const teamName = app.team?.teamName?.toLowerCase() || '';
+        const leaderName = app.team?.leader?.name?.toLowerCase() || '';
+        const problemDomain = app.team?.problemDomain?.toLowerCase() || '';
+        return (
+          studentName.includes(s) ||
+          rollNumber.includes(s) ||
+          email.includes(s) ||
+          teamName.includes(s) ||
+          leaderName.includes(s) ||
+          problemDomain.includes(s)
+        );
+      });
+    }
+
+    const total = filtered.length;
+    const isPaginationRequested = page !== undefined || limit !== undefined;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = limit === 'all' ? total : Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+
+    let paginatedApplications = filtered;
+    if (isPaginationRequested && limit !== 'all') {
+      const skip = (pageNum - 1) * limitNum;
+      paginatedApplications = filtered.slice(skip, skip + limitNum);
+    }
+
+    res.json({
+      success: true,
+      count: paginatedApplications.length,
+      total,
+      page: pageNum,
+      totalPages: isPaginationRequested && limit !== 'all' ? Math.ceil(total / limitNum) || 1 : 1,
+      limit: limitNum,
+      applications: paginatedApplications,
+    });
+  } catch (error) {
+    console.error('Admin applications error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAdminStats,
   getAllStudents,
   getAllTeams,
+  getAllApplications,
   exportTeamsExcel,
 };
+

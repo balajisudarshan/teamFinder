@@ -4,6 +4,7 @@ const {
   getAdminStats,
   getAllStudents,
   getAllTeams,
+  getAllApplications,
   exportTeamsExcel,
 } = require('../controllers/adminController');
 const { protect } = require('../middleware/authMiddleware');
@@ -15,6 +16,7 @@ router.use(protect, adminOnly);
 router.get('/stats', getAdminStats);
 router.get('/students', getAllStudents);
 router.get('/teams', getAllTeams);
+router.get('/applications', getAllApplications);
 router.get('/export-excel', exportTeamsExcel);
 
 module.exports = router;

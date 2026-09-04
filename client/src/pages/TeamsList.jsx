@@ -5,7 +5,9 @@ import {
   Search, 
   PlusCircle, 
   RotateCcw,
-  Users
+  Users,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,6 +17,12 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTeams, setTotalTeams] = useState(0);
+  const limit = 9;
+
   // Filter States
   const [search, setSearch] = useState('');
   const [hackathon, setHackathon] = useState('All');
@@ -22,10 +30,13 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
   const [department, setDepartment] = useState('All');
   const [femaleReqOnly, setFemaleReqOnly] = useState(false);
 
-  const fetchTeams = async () => {
+  const fetchTeams = async (targetPage = page) => {
     setLoading(true);
     try {
-      const params = {};
+      const params = {
+        page: targetPage,
+        limit,
+      };
       if (search.trim()) params.search = search.trim();
       if (hackathon !== 'All') params.hackathon = hackathon;
       if (status !== 'All') params.status = status;
@@ -35,6 +46,9 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
       const res = await api.get('/teams', { params });
       if (res.data?.success) {
         setTeams(res.data.teams || []);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalTeams(res.data.total !== undefined ? res.data.total : (res.data.teams || []).length);
+        setPage(res.data.page || targetPage);
       }
     } catch (err) {
       setError(err.message || 'Failed to fetch teams');
@@ -44,12 +58,22 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
   };
 
   useEffect(() => {
-    fetchTeams();
+    setPage(1);
+    fetchTeams(1);
   }, [hackathon, status, department, femaleReqOnly]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchTeams();
+    setPage(1);
+    fetchTeams(1);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages && newPage !== page) {
+      setPage(newPage);
+      fetchTeams(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleResetFilters = () => {
@@ -58,6 +82,8 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
     setStatus('All');
     setDepartment('All');
     setFemaleReqOnly(false);
+    setPage(1);
+    fetchTeams(1);
   };
 
   return (
@@ -227,15 +253,87 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
           ))}
         </div>
       ) : teams.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {teams.map((team) => (
-            <TeamCard
-              key={team._id}
-              team={team}
-              onSelectTeam={onSelectTeam}
-              onRequestJoin={onRequestJoin}
-            />
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teams.map((team) => (
+              <TeamCard
+                key={team._id}
+                team={team}
+                onSelectTeam={onSelectTeam}
+                onRequestJoin={onRequestJoin}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+              <p className="text-xs text-slate-500">
+                Showing{' '}
+                <strong className="font-semibold text-slate-800">
+                  {(page - 1) * limit + 1}
+                </strong>{' '}
+                to{' '}
+                <strong className="font-semibold text-slate-800">
+                  {Math.min(page * limit, totalTeams)}
+                </strong>{' '}
+                of <strong className="font-semibold text-slate-800">{totalTeams}</strong> teams
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page <= 1}
+                  className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold disabled:opacity-40 disabled:pointer-events-none transition-colors flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  // If lots of pages, show nearby pages, first, and last
+                  if (
+                    totalPages > 7 &&
+                    p !== 1 &&
+                    p !== totalPages &&
+                    Math.abs(p - page) > 1
+                  ) {
+                    if (p === 2 || p === totalPages - 1) {
+                      return (
+                        <span key={p} className="px-1 text-xs text-slate-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={`w-8 h-8 rounded-md text-xs font-semibold transition-colors flex items-center justify-center ${
+                        p === page
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page >= totalPages}
+                  className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold disabled:opacity-40 disabled:pointer-events-none transition-colors flex items-center gap-1"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12 bg-white rounded-xl border border-slate-200 p-6 space-y-2">

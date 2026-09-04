@@ -9,23 +9,77 @@ import {
   Search, 
   Eye, 
   X,
-  Crown
+  Crown,
+  ClipboardList,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import SIHBadge from '../components/SIHBadge';
+
+function PaginationBar({ currentPage, totalPages, totalItems, pageSize, onPageChange }) {
+  if (totalPages <= 1) return null;
+  const startItem = (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
+
+  return (
+    <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-slate-600">
+      <div>
+        Showing <span className="font-semibold text-slate-800">{startItem}</span> to{' '}
+        <span className="font-semibold text-slate-800">{endItem}</span> of{' '}
+        <span className="font-semibold text-slate-800">{totalItems}</span> records
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition-colors flex items-center gap-1 font-medium text-xs shadow-2xs"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          <span>Prev</span>
+        </button>
+        <span className="px-2.5 font-medium text-slate-700">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition-colors flex items-center gap-1 font-medium text-xs shadow-2xs"
+        >
+          <span>Next</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboard({ onSelectTeam, onSuccess }) {
   const [stats, setStats] = useState(null);
   const [teams, setTeams] = useState([]);
   const [students, setStudents] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('teams');
+
+  // Pagination states
+  const [teamPage, setTeamPage] = useState(1);
+  const [studentPage, setStudentPage] = useState(1);
+  const [appPage, setAppPage] = useState(1);
+  const pageSize = 10;
 
   // Filter & Search states
   const [teamSearch, setTeamSearch] = useState('');
   const [teamHackathon, setTeamHackathon] = useState('All');
   const [studentSearch, setStudentSearch] = useState('');
   const [studentDept, setStudentDept] = useState('All');
+  const [appSearch, setAppSearch] = useState('');
+  const [appStatus, setAppStatus] = useState('All');
 
   // Inspector Modal State
   const [inspectingTeam, setInspectingTeam] = useState(null);
@@ -33,15 +87,17 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [statsRes, teamsRes, studentsRes] = await Promise.all([
+      const [statsRes, teamsRes, studentsRes, applicationsRes] = await Promise.all([
         api.get('/admin/stats'),
         api.get('/admin/teams'),
         api.get('/admin/students'),
+        api.get('/admin/applications'),
       ]);
 
       if (statsRes.data?.success) setStats(statsRes.data.stats);
       if (teamsRes.data?.success) setTeams(teamsRes.data.teams || []);
       if (studentsRes.data?.success) setStudents(studentsRes.data.students || []);
+      if (applicationsRes.data?.success) setApplications(applicationsRes.data.applications || []);
     } catch (err) {
       console.error('Error loading admin dashboard:', err);
     } finally {
@@ -104,6 +160,40 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
       s.email?.toLowerCase().includes(studentSearch.toLowerCase());
     return matchesDept && matchesSearch;
   });
+
+  const filteredApplications = applications.filter((app) => {
+    const matchesStatus = appStatus === 'All' || app.status?.toLowerCase() === appStatus.toLowerCase();
+    const query = appSearch.toLowerCase().trim();
+    if (!query) return matchesStatus;
+
+    const studentName = app.student?.name?.toLowerCase() || '';
+    const rollNumber = app.student?.rollNumber?.toLowerCase() || '';
+    const email = app.student?.email?.toLowerCase() || '';
+    const teamName = app.team?.teamName?.toLowerCase() || '';
+    const leaderName = app.team?.leader?.name?.toLowerCase() || '';
+    const domain = app.team?.problemDomain?.toLowerCase() || '';
+    const message = app.message?.toLowerCase() || '';
+
+    const matchesSearch =
+      studentName.includes(query) ||
+      rollNumber.includes(query) ||
+      email.includes(query) ||
+      teamName.includes(query) ||
+      leaderName.includes(query) ||
+      domain.includes(query) ||
+      message.includes(query);
+
+    return matchesStatus && matchesSearch;
+  });
+
+  const totalTeamPages = Math.ceil(filteredTeams.length / pageSize) || 1;
+  const paginatedTeams = filteredTeams.slice((teamPage - 1) * pageSize, teamPage * pageSize);
+
+  const totalStudentPages = Math.ceil(filteredStudents.length / pageSize) || 1;
+  const paginatedStudents = filteredStudents.slice((studentPage - 1) * pageSize, studentPage * pageSize);
+
+  const totalAppPages = Math.ceil(filteredApplications.length / pageSize) || 1;
+  const paginatedApplications = filteredApplications.slice((appPage - 1) * pageSize, appPage * pageSize);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -186,14 +276,24 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
             </p>
           </div>
 
-          <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs">
-            <p className="text-xl font-bold text-slate-900 font-mono">
-              {stats.totalRequests}
+          <button
+            onClick={() => setActiveTab('applications')}
+            className={`text-left p-3.5 rounded-lg border transition-all ${
+              activeTab === 'applications'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-white hover:border-slate-400 border-slate-200 shadow-xs'
+            }`}
+          >
+            <p className={`text-xl font-bold font-mono ${activeTab === 'applications' ? 'text-white' : 'text-slate-900'}`}>
+              {stats.totalRequests ?? applications.length}
             </p>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-              Applications
+            <p className={`text-[11px] font-medium mt-0.5 flex items-center justify-between ${
+              activeTab === 'applications' ? 'text-slate-300' : 'text-slate-500'
+            }`}>
+              <span>Applications</span>
+              <span className="text-[10px] font-semibold">View &rarr;</span>
             </p>
-          </div>
+          </button>
         </div>
       )}
 
@@ -222,6 +322,18 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
           <Users className="w-3.5 h-3.5" />
           <span>Student Directory ({students.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('applications')}
+          className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'applications'
+              ? 'border-slate-900 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <ClipboardList className="w-3.5 h-3.5" />
+          <span>Applications ({applications.length})</span>
+        </button>
       </div>
 
       {/* Tab 1: Teams Management Table */}
@@ -235,7 +347,10 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
               <input
                 type="text"
                 value={teamSearch}
-                onChange={(e) => setTeamSearch(e.target.value)}
+                onChange={(e) => {
+                  setTeamSearch(e.target.value);
+                  setTeamPage(1);
+                }}
                 placeholder="Search team name, leader, or roll no..."
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:border-slate-800"
               />
@@ -245,7 +360,10 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
               <label className="font-semibold text-slate-500">Event:</label>
               <select
                 value={teamHackathon}
-                onChange={(e) => setTeamHackathon(e.target.value)}
+                onChange={(e) => {
+                  setTeamHackathon(e.target.value);
+                  setTeamPage(1);
+                }}
                 className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none"
               >
                 <option value="All">All Events</option>
@@ -271,77 +389,93 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredTeams.map((team) => {
-                    const membersCount = team.members?.length || 0;
-                    const maxMembers = team.requiredMembers || 6;
-                    const hasFemale =
-                      team.leader?.gender === 'Female' ||
-                      team.members?.some((m) => m?.gender === 'Female');
-                    const isSIH = team.hackathon?.toLowerCase().includes('sih');
+                  {filteredTeams.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="p-8 text-center text-slate-500">
+                        No registered teams match the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedTeams.map((team) => {
+                      const membersCount = team.members?.length || 0;
+                      const maxMembers = team.requiredMembers || 6;
+                      const hasFemale =
+                        team.leader?.gender === 'Female' ||
+                        team.members?.some((m) => m?.gender === 'Female');
+                      const isSIH = team.hackathon?.toLowerCase().includes('sih');
 
-                    return (
-                      <tr key={team._id} className="hover:bg-slate-50/60">
-                        <td className="p-3">
-                          <p className="font-semibold text-slate-900">{team.teamName}</p>
-                          <p className="text-[11px] text-slate-500 truncate max-w-xs">{team.problemDomain}</p>
-                        </td>
+                      return (
+                        <tr key={team._id} className="hover:bg-slate-50/60">
+                          <td className="p-3">
+                            <p className="font-semibold text-slate-900">{team.teamName}</p>
+                            <p className="text-[11px] text-slate-500 truncate max-w-xs">{team.problemDomain}</p>
+                          </td>
 
-                        <td className="p-3 text-slate-600 font-medium">
-                          {team.hackathon}
-                        </td>
+                          <td className="p-3 text-slate-600 font-medium">
+                            {team.hackathon}
+                          </td>
 
-                        <td className="p-3">
-                          <span className="font-semibold text-slate-800 block">{team.leader?.name}</span>
-                          <span className="font-mono text-[11px] text-slate-500 block">
-                            {team.leader?.rollNumber}
-                          </span>
-                        </td>
-
-                        <td className="p-3">
-                          <span className="font-mono font-medium text-slate-800">
-                            {membersCount} / {maxMembers}
-                          </span>
-                        </td>
-
-                        <td className="p-3">
-                          {isSIH ? (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${
-                              hasFemale
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : 'bg-amber-50 text-amber-800 border border-amber-200'
-                            }`}>
-                              {hasFemale ? 'Female Included' : 'Missing Female'}
+                          <td className="p-3">
+                            <span className="font-semibold text-slate-800 block">{team.leader?.name}</span>
+                            <span className="font-mono text-[11px] text-slate-500 block">
+                              {team.leader?.rollNumber}
                             </span>
-                          ) : (
-                            <span className="text-[11px] text-slate-400">—</span>
-                          )}
-                        </td>
+                          </td>
 
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-medium capitalize ${
-                            team.status === 'full'
-                              ? 'bg-slate-100 text-slate-600'
-                              : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          }`}>
-                            {team.status}
-                          </span>
-                        </td>
+                          <td className="p-3">
+                            <span className="font-mono font-medium text-slate-800">
+                              {membersCount} / {maxMembers}
+                            </span>
+                          </td>
 
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => setInspectingTeam(team)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Inspect</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <td className="p-3">
+                            {isSIH ? (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${
+                                hasFemale
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}>
+                                {hasFemale ? 'Female Included' : 'Missing Female'}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-400">—</span>
+                            )}
+                          </td>
+
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-medium capitalize ${
+                              team.status === 'full'
+                                ? 'bg-slate-100 text-slate-600'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            }`}>
+                              {team.status}
+                            </span>
+                          </td>
+
+                          <td className="p-3 text-right">
+                            <button
+                              onClick={() => setInspectingTeam(team)}
+                              className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Inspect</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
+
+            <PaginationBar
+              currentPage={teamPage}
+              totalPages={totalTeamPages}
+              totalItems={filteredTeams.length}
+              pageSize={pageSize}
+              onPageChange={setTeamPage}
+            />
           </div>
         </div>
       )}
@@ -355,7 +489,10 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
               <input
                 type="text"
                 value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
+                onChange={(e) => {
+                  setStudentSearch(e.target.value);
+                  setStudentPage(1);
+                }}
                 placeholder="Search student name, roll number, email..."
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:border-slate-800"
               />
@@ -365,7 +502,10 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
               <label className="font-semibold text-slate-500">Dept:</label>
               <select
                 value={studentDept}
-                onChange={(e) => setStudentDept(e.target.value)}
+                onChange={(e) => {
+                  setStudentDept(e.target.value);
+                  setStudentPage(1);
+                }}
                 className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none"
               >
                 <option value="All">All Departments</option>
@@ -394,28 +534,360 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map((st) => (
-                    <tr key={st._id} className="hover:bg-slate-50/60">
-                      <td className="p-3 font-semibold text-slate-900">{st.name}</td>
-                      <td className="p-3 font-mono text-slate-800 font-semibold">{st.rollNumber}</td>
-                      <td className="p-3 text-slate-600 font-mono text-[11px]">{st.email}</td>
-                      <td className="p-3 text-slate-700">{st.department} • {st.year}</td>
-                      <td className="p-3 text-slate-600">{st.gender}</td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {(st.skills || []).map((skill, i) => (
-                            <span key={i} className="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded text-slate-700 border border-slate-200">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
+                  {filteredStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="p-8 text-center text-slate-500">
+                        No students found matching your criteria.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedStudents.map((st) => (
+                      <tr key={st._id} className="hover:bg-slate-50/60">
+                        <td className="p-3 font-semibold text-slate-900">{st.name}</td>
+                        <td className="p-3 font-mono text-slate-800 font-semibold">{st.rollNumber}</td>
+                        <td className="p-3 text-slate-600 font-mono text-[11px]">{st.email}</td>
+                        <td className="p-3 text-slate-700">{st.department} • {st.year}</td>
+                        <td className="p-3 text-slate-600">{st.gender}</td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {(st.skills || []).map((skill, i) => (
+                              <span key={i} className="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded text-slate-700 border border-slate-200">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+
+            <PaginationBar
+              currentPage={studentPage}
+              totalPages={totalStudentPages}
+              totalItems={filteredStudents.length}
+              pageSize={pageSize}
+              onPageChange={setStudentPage}
+            />
           </div>
+        </div>
+      )}
+
+      {/* Tab 3: Applications Management */}
+      {activeTab === 'applications' && (
+        <div className="space-y-3">
+          
+          {/* Controls Bar */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            <div className="relative w-full md:w-80">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={appSearch}
+                onChange={(e) => {
+                  setAppSearch(e.target.value);
+                  setAppPage(1);
+                }}
+                placeholder="Search applicant name, roll number, team..."
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:border-slate-800"
+              />
+            </div>
+
+            {/* Quick Status Filter Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-[11px] font-semibold text-slate-500 mr-1">Status:</span>
+              <button
+                onClick={() => {
+                  setAppStatus('All');
+                  setAppPage(1);
+                }}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  appStatus === 'All'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                All ({applications.length})
+              </button>
+              <button
+                onClick={() => {
+                  setAppStatus('pending');
+                  setAppPage(1);
+                }}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
+                  appStatus === 'pending'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/60'
+                }`}
+              >
+                <Clock className="w-3 h-3" />
+                Pending ({applications.filter((a) => a.status === 'pending').length})
+              </button>
+              <button
+                onClick={() => {
+                  setAppStatus('accepted');
+                  setAppPage(1);
+                }}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
+                  appStatus === 'accepted'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/60'
+                }`}
+              >
+                <CheckCircle2 className="w-3 h-3" />
+                Accepted ({applications.filter((a) => a.status === 'accepted').length})
+              </button>
+              <button
+                onClick={() => {
+                  setAppStatus('rejected');
+                  setAppPage(1);
+                }}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
+                  appStatus === 'rejected'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200/60'
+                }`}
+              >
+                <XCircle className="w-3 h-3" />
+                Rejected ({applications.filter((a) => a.status === 'rejected').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Applications Table */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+            {filteredApplications.length === 0 ? (
+              <div className="py-12 px-4 text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                  <ClipboardList className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-800">No applications found</h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  {appSearch || appStatus !== 'All'
+                    ? 'No join requests match your current search or status filter.'
+                    : 'No students have applied to join any teams yet.'}
+                </p>
+                {(appSearch || appStatus !== 'All') && (
+                  <button
+                    onClick={() => {
+                      setAppSearch('');
+                      setAppStatus('All');
+                    }}
+                    className="mt-3 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-md transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                    <tr>
+                      <th className="p-3">Applicant / Member</th>
+                      <th className="p-3">Target Team</th>
+                      <th className="p-3">Application Note</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3">Applied On</th>
+                      <th className="p-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedApplications.map((app) => {
+                      const student = app.student;
+                      const team = app.team;
+                      const status = app.status || 'pending';
+
+                      return (
+                        <tr key={app._id} className="hover:bg-slate-50/60 transition-colors">
+                          
+                          {/* 1. Applicant / Member Details */}
+                          <td className="p-3">
+                            {student ? (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-slate-900 text-xs">
+                                    {student.name}
+                                  </span>
+                                  {student.gender && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                      {student.gender}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-2">
+                                  <span className="font-mono font-semibold text-slate-700">
+                                    {student.rollNumber || 'No Roll #'}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{student.department || 'N/A'} ({student.year || 'N/A'})</span>
+                                </div>
+                                <p className="text-[11px] font-mono text-slate-400">
+                                  {student.email}
+                                </p>
+                                {student.skills && student.skills.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1 max-w-xs">
+                                    {student.skills.slice(0, 3).map((skill, i) => (
+                                      <span
+                                        key={i}
+                                        className="text-[9px] bg-slate-100 px-1.5 py-0.2 rounded text-slate-600 border border-slate-200 font-medium"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {student.skills.length > 3 && (
+                                      <span className="text-[9px] text-slate-400 self-center">
+                                        +{student.skills.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">Student profile unavailable</span>
+                            )}
+                          </td>
+
+                          {/* 2. Target Team Info */}
+                          <td className="p-3">
+                            {team ? (
+                              <div className="space-y-1">
+                                <p className="font-semibold text-slate-900 text-xs flex items-center gap-1.5">
+                                  {team.teamName}
+                                  {team.hackathon && (
+                                    <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                      {team.hackathon}
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-slate-500 line-clamp-1 max-w-xs">
+                                  {team.problemDomain || 'General'}
+                                </p>
+                                <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                                  <span className="text-slate-400">Lead:</span>
+                                  <span className="font-medium text-slate-800">
+                                    {team.leader?.name || 'N/A'}
+                                  </span>
+                                  {team.leader?.rollNumber && (
+                                    <span className="font-mono text-[10px] text-slate-400">
+                                      ({team.leader.rollNumber})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-500 flex items-center gap-2">
+                                  <span>
+                                    Roster: <strong className="font-mono text-slate-700">{team.members?.length || 0}/{team.requiredMembers || 6}</strong>
+                                  </span>
+                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-medium capitalize ${
+                                    team.status === 'full'
+                                      ? 'bg-slate-100 text-slate-600'
+                                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  }`}>
+                                    {team.status || 'open'}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">Team details unavailable</span>
+                            )}
+                          </td>
+
+                          {/* 3. Applicant Message / Pitch */}
+                          <td className="p-3 max-w-xs">
+                            {app.message ? (
+                              <div className="bg-slate-50 p-2 rounded-md border border-slate-200/80 text-[11px] text-slate-700 space-y-1">
+                                <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                  <MessageSquare className="w-3 h-3" />
+                                  <span>Applicant Note</span>
+                                </div>
+                                <p className="italic line-clamp-3 text-slate-600">
+                                  "{app.message}"
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-[11px] italic">
+                                No personal message attached
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 4. Status Badge */}
+                          <td className="p-3">
+                            {status === 'pending' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>Pending</span>
+                              </span>
+                            )}
+                            {status === 'accepted' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Accepted</span>
+                              </span>
+                            )}
+                            {status === 'rejected' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                                <XCircle className="w-3 h-3 text-rose-600" />
+                                <span>Rejected</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 5. Applied On Date */}
+                          <td className="p-3 text-slate-600 whitespace-nowrap">
+                            <span className="block font-medium text-slate-800">
+                              {app.createdAt
+                                ? new Date(app.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })
+                                : '—'}
+                            </span>
+                            <span className="block text-[11px] text-slate-400 font-mono">
+                              {app.createdAt
+                                ? new Date(app.createdAt).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : ''}
+                            </span>
+                          </td>
+
+                          {/* 6. Quick Actions */}
+                          <td className="p-3 text-right whitespace-nowrap">
+                            {team ? (
+                              <button
+                                onClick={() => setInspectingTeam(team)}
+                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                                title="Inspect Team Details"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Inspect Team</span>
+                              </button>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <PaginationBar
+              currentPage={appPage}
+              totalPages={totalAppPages}
+              totalItems={filteredApplications.length}
+              pageSize={pageSize}
+              onPageChange={setAppPage}
+            />
+          </div>
+
         </div>
       )}
 

@@ -89,7 +89,7 @@ const createTeam = async (req, res) => {
 // @access  Public
 const getTeams = async (req, res) => {
   try {
-    const { hackathon, department, year, genderReq, status, search, skill } = req.query;
+    const { hackathon, department, year, genderReq, status, search, skill, page, limit } = req.query;
 
     let query = {};
 
@@ -127,14 +127,32 @@ const getTeams = async (req, res) => {
       ];
     }
 
-    const teams = await Team.find(query)
+    const total = await Team.countDocuments(query);
+
+    let teamsQuery = Team.find(query)
       .populate('leader', 'name rollNumber email department year gender skills')
       .populate('members', 'name rollNumber email department year gender skills')
       .sort({ createdAt: -1 });
 
+    // Handle pagination if page or limit is provided
+    const isPaginationRequested = page !== undefined || limit !== undefined;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = limit === 'all' ? total : Math.min(100, Math.max(1, parseInt(limit, 10) || 9));
+
+    if (isPaginationRequested && limit !== 'all') {
+      const skip = (pageNum - 1) * limitNum;
+      teamsQuery = teamsQuery.skip(skip).limit(limitNum);
+    }
+
+    const teams = await teamsQuery;
+
     res.json({
       success: true,
       count: teams.length,
+      total,
+      page: pageNum,
+      totalPages: isPaginationRequested && limit !== 'all' ? Math.ceil(total / limitNum) || 1 : 1,
+      limit: limitNum,
       teams,
     });
   } catch (error) {

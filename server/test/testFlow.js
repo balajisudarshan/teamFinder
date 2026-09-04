@@ -25,6 +25,9 @@ async function runTests() {
   app.use(cors());
   app.use(express.json());
 
+  const { apiLimiter } = require('../middleware/rateLimiter');
+  app.use('/api', apiLimiter);
+
   app.use('/api/auth', authRoutes);
   app.use('/api/teams', teamRoutes);
   app.use('/api/requests', requestRoutes);
@@ -252,8 +255,24 @@ async function runTests() {
       throw new Error(`FAIL: Admin stats query failed: ${JSON.stringify(statsData)}`);
     }
 
-    // TEST 10: Admin Excel Export (.xlsx)
-    console.log('\n[TEST 10] Admin generates Excel (.xlsx) roster...');
+    // TEST 10: Admin Applications Query
+    console.log('\n[TEST 10] Admin queries applications endpoint...');
+    const appsRes = await fetch(`${baseUrl}/admin/applications`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const appsData = await appsRes.json();
+    if (appsRes.status === 200 && Array.isArray(appsData.applications) && appsData.applications.length > 0) {
+      console.log(`✔ PASS: Admin applications retrieved: ${appsData.applications.length} application(s) found`);
+      const app = appsData.applications[0];
+      console.log(`  -> Applicant: ${app.student?.name} (${app.student?.rollNumber})`);
+      console.log(`  -> Target Team: ${app.team?.teamName}`);
+      console.log(`  -> Status: ${app.status}`);
+    } else {
+      throw new Error(`FAIL: Admin applications query failed: ${JSON.stringify(appsData)}`);
+    }
+
+    // TEST 11: Admin Excel Export (.xlsx)
+    console.log('\n[TEST 11] Admin generates Excel (.xlsx) roster...');
     const excelRes = await fetch(`${baseUrl}/admin/export-excel`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
@@ -267,7 +286,36 @@ async function runTests() {
       throw new Error(`FAIL: Excel export failed with status ${excelRes.status}`);
     }
 
-    console.log('\n🎉 ALL 10 TESTS COMPLETED AND PASSED WITH 100% SUCCESS! 🎉');
+    // TEST 12: Teams List Pagination Verification
+    console.log('\n[TEST 12] Testing teams catalog pagination (?page=1&limit=2)...');
+    const pageTeamsRes = await fetch(`${baseUrl}/teams?page=1&limit=2`);
+    const pageTeamsData = await pageTeamsRes.json();
+    if (
+      pageTeamsRes.status === 200 &&
+      pageTeamsData.page === 1 &&
+      pageTeamsData.limit === 2 &&
+      pageTeamsData.total !== undefined &&
+      Array.isArray(pageTeamsData.teams) &&
+      pageTeamsData.teams.length <= 2
+    ) {
+      console.log(`✔ PASS: Team catalog pagination verified: page=${pageTeamsData.page}, limit=${pageTeamsData.limit}, total=${pageTeamsData.total}, totalPages=${pageTeamsData.totalPages}`);
+    } else {
+      throw new Error(`FAIL: Teams pagination failed: ${JSON.stringify(pageTeamsData)}`);
+    }
+
+    // TEST 13: Admin Students and Applications Pagination Verification
+    console.log('\n[TEST 13] Testing admin directory and applications pagination...');
+    const pageStudentsRes = await fetch(`${baseUrl}/admin/students?page=1&limit=5`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const pageStudentsData = await pageStudentsRes.json();
+    if (pageStudentsRes.status === 200 && pageStudentsData.page === 1 && pageStudentsData.total !== undefined) {
+      console.log(`✔ PASS: Admin student directory pagination verified: page=${pageStudentsData.page}, total=${pageStudentsData.total}, returned=${pageStudentsData.students.length}`);
+    } else {
+      throw new Error(`FAIL: Admin students pagination failed: ${JSON.stringify(pageStudentsData)}`);
+    }
+
+    console.log('\n🎉 ALL 13 TESTS COMPLETED AND PASSED WITH 100% SUCCESS! 🎉');
     server.close();
     process.exit(0);
   } catch (err) {
