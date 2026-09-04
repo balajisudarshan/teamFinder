@@ -91,10 +91,15 @@ const getTeams = async (req, res) => {
   try {
     const { hackathon, department, year, genderReq, status, search, skill, page, limit } = req.query;
 
-    let query = {};
+    // Exclude flagged fake/spam teams from public catalog
+    let query = { isFlagged: { $ne: true } };
 
     if (hackathon && hackathon !== 'All') {
-      query.hackathon = { $regex: new RegExp(hackathon.trim(), 'i') };
+      if (hackathon.toLowerCase().includes('sih') || hackathon.toLowerCase().includes('smart india')) {
+        query.hackathon = { $regex: /sih|smart india/i };
+      } else {
+        query.hackathon = { $regex: new RegExp(hackathon.trim(), 'i') };
+      }
     }
 
     if (status && status !== 'All') {

@@ -10,11 +10,12 @@ import {
   Menu,
   X,
   Layers,
-  Bell
+  Bell,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function Navbar({ activePage, setActivePage }) {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, isFlagged, isTeamFlagged } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -154,6 +155,18 @@ export default function Navbar({ activePage, setActivePage }) {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
+                {(isFlagged || isTeamFlagged) && (
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event('open-flag-alert'))}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 rounded-md text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                    title="Active Flag Notice - Click to view details and coordinator contact"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-700 animate-bounce" />
+                    <span>{isFlagged ? 'Account Flagged' : 'Team Flagged'}</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => handleNav('profile')}
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors text-left"
@@ -254,6 +267,20 @@ export default function Navbar({ activePage, setActivePage }) {
               >
                 My Profile ({user?.rollNumber})
               </button>
+
+              {(isFlagged || isTeamFlagged) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    window.dispatchEvent(new Event('open-flag-alert'));
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-md font-bold bg-amber-100 border border-amber-300 text-amber-900 flex items-center gap-2"
+                >
+                  <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>{isFlagged ? 'Account Flagged — View Notice' : 'Team Flagged — View Notice & Contact'}</span>
+                </button>
+              )}
             </>
           )}
           {isAdmin && (

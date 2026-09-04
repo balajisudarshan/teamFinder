@@ -45,9 +45,10 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
 
       const res = await api.get('/teams', { params });
       if (res.data?.success) {
-        setTeams(res.data.teams || []);
+        const nonFlaggedTeams = (res.data.teams || []).filter((t) => !t.isFlagged);
+        setTeams(nonFlaggedTeams);
         setTotalPages(res.data.totalPages || 1);
-        setTotalTeams(res.data.total !== undefined ? res.data.total : (res.data.teams || []).length);
+        setTotalTeams(res.data.total !== undefined ? res.data.total : nonFlaggedTeams.length);
         setPage(res.data.page || targetPage);
       }
     } catch (err) {
@@ -171,7 +172,7 @@ export default function TeamsList({ setActivePage, onSelectTeam, onRequestJoin }
               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-slate-800"
             >
               <option value="All">All Hackathons</option>
-              <option value="Smart India Hackathon (SIH)">Smart India Hackathon (SIH)</option>
+              <option value="Smart India Hackathon (SIH 2026)">Smart India Hackathon (SIH 2026)</option>
               <option value="NBKRIST Internal Hackathon">NBKRIST Internal Hackathon</option>
               <option value="Open National Hackathon">Open National Hackathon</option>
             </select>

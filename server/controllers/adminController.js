@@ -263,11 +263,206 @@ const getAllApplications = async (req, res) => {
   }
 };
 
+// @desc    Flag or unflag a student/user
+// @route   PUT /api/admin/users/:userId/flag
+// @access  Private (Admin only)
+const toggleUserFlag = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isFlagged, reason } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(400).json({ success: false, message: 'Cannot flag an administrator/coordinator account' });
+    }
+
+    user.isFlagged = Boolean(isFlagged);
+    user.flagReason = user.isFlagged
+      ? (reason ? reason.trim() : 'Flagged by faculty coordinator for verification')
+      : '';
+    user.flaggedAt = user.isFlagged ? new Date() : null;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: user.isFlagged
+        ? `Student ${user.name} (${user.rollNumber}) has been flagged: "${user.flagReason}"`
+        : `Student ${user.name} has been unflagged and restored to good standing.`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        rollNumber: user.rollNumber,
+        email: user.email,
+        isFlagged: user.isFlagged,
+        flagReason: user.flagReason,
+        flaggedAt: user.flaggedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Toggle user flag error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Flag or unflag a team
+// @route   PUT /api/admin/teams/:teamId/flag
+// @access  Private (Admin only)
+const toggleTeamFlag = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const { isFlagged, reason } = req.body;
+
+    const team = await Team.findById(teamId)
+      .populate('leader', 'name rollNumber email')
+      .populate('members', 'name rollNumber email');
+
+    if (!team) {
+      return res.status(404).json({ success: false, message: 'Team not found' });
+    }
+
+    team.isFlagged = Boolean(isFlagged);
+    team.flagReason = team.isFlagged
+      ? (reason ? reason.trim() : 'Flagged by faculty coordinator for review')
+      : '';
+    team.flaggedAt = team.isFlagged ? new Date() : null;
+
+    await team.save();
+
+    res.json({
+      success: true,
+      message: team.isFlagged
+        ? `Team "${team.teamName}" has been flagged: "${team.flagReason}"`
+        : `Team "${team.teamName}" has been unflagged and restored to good standing.`,
+      team,
+    });
+  } catch (error) {
+    console.error('Toggle team flag error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete a team (Admin permanent deletion)
+// @route   DELETE /api/admin/teams/:teamId
+// @access  Private (Admin only)
+const deleteTeamByAdmin = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId);
+
+    if (!team) {
+      return res.status(404).json({ success: false, message: 'Team not found' });
+    }
+
+    const teamName = team.teamName;
+
+    // Delete all join requests related to this team
+    await JoinRequest.deleteMany({ team: team._id });
+
+    // Delete the team document
+    await Team.findByIdAndDelete(team._id);
+
+    res.json({
+      success: true,
+      message: `Team "${teamName}" and all associated join requests have been permanently deleted.`,
+    });
+  } catch (error) {
+    console.error('Admin delete team error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete a student account (Admin permanent deletion)
+// @route   DELETE /api/admin/users/:userId
+// @access  Private (Admin only)
+const deleteUserByAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(400).json({ success: false, message: 'Cannot delete an administrator account' });
+    }
+
+    const studentName = user.name;
+    const studentRoll = user.rollNumber;
+
+    // 1. Remove user from team memberships
+    await Team.updateMany(
+      { members: user._id },
+      { $pull: { members: user._id } }
+    );
+
+    // 2. For teams where user is leader: if they were sole member, delete team; otherwise reassign leader to next member
+    const leadingTeams = await Team.find({ leader: user._id });
+    for (const lt of leadingTeams) {
+      if (lt.members.length === 0) {
+        await JoinRequest.deleteMany({ team: lt._id });
+        await Team.findByIdAndDelete(lt._id);
+      } else {
+        lt.leader = lt.members[0];
+        await lt.save();
+      }
+    }
+
+    // 3. Remove all join requests by this student
+    await JoinRequest.deleteMany({ student: user._id });
+
+    // 4. Delete the user
+    await User.findByIdAndDelete(user._id);
+
+    res.json({
+      success: true,
+      message: `Student account ${studentName} (${studentRoll}) has been permanently deleted.`,
+    });
+  } catch (error) {
+    console.error('Admin delete user error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete an application (Admin deletion)
+// @route   DELETE /api/admin/applications/:applicationId
+// @access  Private (Admin only)
+const deleteApplicationByAdmin = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const app = await JoinRequest.findById(applicationId);
+
+    if (!app) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    await JoinRequest.findByIdAndDelete(applicationId);
+
+    res.json({
+      success: true,
+      message: 'Application record has been deleted.',
+    });
+  } catch (error) {
+    console.error('Admin delete application error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAdminStats,
   getAllStudents,
   getAllTeams,
   getAllApplications,
   exportTeamsExcel,
+  toggleUserFlag,
+  toggleTeamFlag,
+  deleteTeamByAdmin,
+  deleteUserByAdmin,
+  deleteApplicationByAdmin,
 };
 

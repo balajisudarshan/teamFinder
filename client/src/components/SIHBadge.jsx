@@ -29,7 +29,7 @@ export default function SIHBadge({ team }) {
   return (
     <div className="inline-flex flex-wrap items-center gap-1.5">
       <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-        SIH 2025
+        SIH 2026
       </span>
 
       {hasFemale ? (

@@ -13,7 +13,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
 
   const [formData, setFormData] = useState({
     teamName: '',
-    hackathon: 'Smart India Hackathon (SIH)',
+    hackathon: 'Smart India Hackathon (SIH 2026)',
     problemDomain: '',
     description: '',
     requiredMembers: 6,
@@ -81,15 +81,55 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
 
-      {/* Page Header */}
-      <div className="border-b border-slate-200 pb-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-['Plus_Jakarta_Sans',sans-serif]">
-          Create a Hackathon Team
-        </h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Assemble your NBKRIST squad, specify technical requirements, and invite teammates
-        </p>
-      </div>
+      {/* Flagged account block screen */}
+      {user?.isFlagged ? (
+        <div className="bg-white rounded-xl p-8 border border-rose-200 shadow-sm text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-rose-950">
+              Team Creation Locked: Account Flagged
+            </h2>
+            <p className="text-xs text-rose-800 max-w-md mx-auto">
+              Your account has been flagged by the faculty coordinator with reason:
+            </p>
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs font-mono font-medium text-rose-900 max-w-md mx-auto my-2">
+              "{user.flagReason || 'Unverified student account or policy violation'}"
+            </div>
+            <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+              You cannot create new teams while flagged. Please contact the coordinator desk with your physical student ID card to restore your account.
+            </p>
+          </div>
+          <div className="pt-2 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActivePage('teams')}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold"
+            >
+              Browse Existing Teams
+            </button>
+            <a
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=24kb1a0517@nbkrist.org&su=${encodeURIComponent('NBKRIST TeamFinder - Account Flag Appeal')}&body=${encodeURIComponent('Respected Faculty Coordinator,\n\nMy account was flagged on TeamFinder. Please review and restore my standing.\n\nThank you.')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-md text-xs font-semibold inline-flex items-center gap-1.5"
+            >
+              Contact Coordinator
+            </a>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Page Header */}
+          <div className="border-b border-slate-200 pb-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-['Plus_Jakarta_Sans',sans-serif]">
+              Create a Hackathon Team
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Assemble your NBKRIST squad, specify technical requirements, and invite teammates
+            </p>
+          </div>
 
       {/* Main Form Container */}
       <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs space-y-5">
@@ -118,7 +158,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
               onChange={handleHackathonChange}
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
             >
-              <option value="Smart India Hackathon (SIH)">Smart India Hackathon (SIH)</option>
+              <option value="Smart India Hackathon (SIH 2026)">Smart India Hackathon (SIH 2026)</option>
               <option value="NBKRIST Internal Hackathon">NBKRIST Internal Hackathon</option>
               <option value="Open National Hackathon">Open National Hackathon</option>
               <option value="State Innovation Challenge">State Innovation Challenge</option>
@@ -399,7 +439,9 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
         </form>
 
       </div>
+    </>
+  )}
 
-    </div>
+</div>
   );
 }

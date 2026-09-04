@@ -11,18 +11,19 @@ const {
 } = require('../controllers/teamController');
 const { protect } = require('../middleware/authMiddleware');
 const { createTeamLimiter } = require('../middleware/rateLimiter');
+const { requireNotFlagged } = require('../middleware/flagCheckMiddleware');
 
 router.route('/')
   .get(getTeams)
-  .post(protect, createTeamLimiter, createTeam);
+  .post(protect, requireNotFlagged, createTeamLimiter, createTeam);
 
 router.get('/my-teams', protect, getMyTeams);
 
 router.route('/:id')
   .get(getTeamById)
-  .put(protect, updateTeam)
-  .delete(protect, deleteTeam);
+  .put(protect, requireNotFlagged, updateTeam)
+  .delete(protect, requireNotFlagged, deleteTeam);
 
-router.delete('/:id/members/:memberId', protect, removeMember);
+router.delete('/:id/members/:memberId', protect, requireNotFlagged, removeMember);
 
 module.exports = router;

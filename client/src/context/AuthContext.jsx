@@ -33,6 +33,48 @@ export const AuthProvider = ({ children }) => {
     fetchCurrentUser();
   }, [token]);
 
+  // Active sync: Poll every 4s and listen for focus/flag events so logged-in users are alerted immediately if flagged
+  useEffect(() => {
+    if (!token) return;
+
+    const syncStatus = async () => {
+      try {
+        const res = await api.get('/auth/profile');
+        if (res.data?.success) {
+          setUser((prev) => {
+            const next = res.data.user;
+            // Only trigger state update if flag state, team flag state, or details changed
+            if (
+              !prev ||
+              prev.isFlagged !== next.isFlagged ||
+              prev.flagReason !== next.flagReason ||
+              prev.team?.isFlagged !== next.team?.isFlagged ||
+              prev.team?.flagReason !== next.team?.flagReason
+            ) {
+              return next;
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // Silently ignore background polling errors
+      }
+    };
+
+    const intervalId = setInterval(syncStatus, 4000);
+    const onFocus = () => syncStatus();
+    const onFlagEvent = () => syncStatus();
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('account-flagged', onFlagEvent);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('account-flagged', onFlagEvent);
+    };
+  }, [token]);
+
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     if (res.data?.success) {
@@ -78,6 +120,28 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.data?.message || 'Failed to update profile');
   };
 
+  const refreshUser = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get('/auth/profile');
+      if (res.data?.success) {
+        setUser(res.data.user);
+        return res.data.user;
+      }
+    } catch (err) {
+      console.warn('Failed to refresh user profile:', err.message);
+    }
+  };
+
+  const isUserFlagged = Boolean(user?.isFlagged);
+  const isTeamFlagged = Boolean(user?.team?.isFlagged);
+  const hasActiveFlag = isUserFlagged || isTeamFlagged;
+  const activeFlagReason = isUserFlagged
+    ? user?.flagReason
+    : isTeamFlagged
+    ? user?.team?.flagReason
+    : '';
+
   return (
     <AuthContext.Provider
       value={{
@@ -86,10 +150,19 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
+        isFlagged: isUserFlagged,
+        flagReason: user?.flagReason || '',
+        flaggedAt: user?.flaggedAt || null,
+        isTeamFlagged,
+        teamFlagReason: user?.team?.flagReason || '',
+        flaggedTeamName: user?.team?.teamName || '',
+        hasActiveFlag,
+        activeFlagReason,
         login,
         register,
         logout,
         updateProfile,
+        refreshUser,
       }}
     >
       {children}

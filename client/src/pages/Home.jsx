@@ -129,7 +129,7 @@ export default function Home({ setActivePage, onSelectTeam, onRequestJoin }) {
                 {stats.sihTeams}
               </p>
               <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-                SIH 2025 Teams
+                SIH 2026 Teams
               </p>
             </div>
 

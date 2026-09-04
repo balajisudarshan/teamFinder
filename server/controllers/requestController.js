@@ -17,6 +17,14 @@ const sendJoinRequest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Team not found' });
     }
 
+    // Check if team is flagged
+    if (team.isFlagged) {
+      return res.status(403).json({
+        success: false,
+        message: `This team has been flagged by the faculty coordinator: "${team.flagReason}". New applications cannot be submitted to flagged teams.`,
+      });
+    }
+
     // Check if team is full
     if (team.members.length >= team.requiredMembers) {
       return res.status(400).json({ success: false, message: 'This team is already complete / full' });

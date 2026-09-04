@@ -46,8 +46,8 @@ async function runTests() {
   } catch (e) {}
 
   // Clean up any test records from prior runs
-  await User.deleteMany({ email: { $regex: /anil|pooja|coordinator|intruder/i } });
-  await Team.deleteMany({ teamName: { $regex: /EcoVanguard|Second Team/i } });
+  await User.deleteMany({ email: { $regex: /anil|pooja|coordinator|intruder|imposter/i } });
+  await Team.deleteMany({ teamName: { $regex: /EcoVanguard|Second Team|Spam Target|Forbidden/i } });
   await JoinRequest.deleteMany({});
 
   const server = http.createServer(app);
@@ -315,7 +315,203 @@ async function runTests() {
       throw new Error(`FAIL: Admin students pagination failed: ${JSON.stringify(pageStudentsData)}`);
     }
 
-    console.log('\n🎉 ALL 13 TESTS COMPLETED AND PASSED WITH 100% SUCCESS! 🎉');
+    // TEST 14: Admin Flags Student Account as Fake & Verifies Action Restrictions
+    console.log('\n[TEST 14] Testing Admin flagging a fake student and verifying action lockouts...');
+    // Register a student with suspicious credentials
+    const fakeRegRes = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Imposter Student',
+        rollNumber: 'FAKE99999',
+        email: 'imposter.99@nbkrist.org',
+        password: 'password123',
+        department: 'CSE',
+        year: '1st Year',
+        gender: 'Male',
+        skills: 'None',
+      }),
+    });
+    const fakeRegData = await fakeRegRes.json();
+    const fakeUserId = fakeRegData.user._id;
+    const fakeToken = fakeRegData.token;
+
+    // Admin flags this student
+    const flagUserRes = await fetch(`${baseUrl}/admin/users/${fakeUserId}/flag`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({
+        isFlagged: true,
+        reason: 'Fake roll number - unverified student identity',
+      }),
+    });
+    const flagUserData = await flagUserRes.json();
+    if (flagUserRes.status === 200 && flagUserData.user.isFlagged === true) {
+      console.log('✔ PASS: Admin successfully flagged student with reason:', flagUserData.user.flagReason);
+    } else {
+      throw new Error(`FAIL: Flagging student failed: ${JSON.stringify(flagUserData)}`);
+    }
+
+    // Flagged student tries to create a team -> must be blocked with 403
+    const blockedTeamRes = await fetch(`${baseUrl}/teams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${fakeToken}`,
+      },
+      body: JSON.stringify({
+        teamName: 'Forbidden Team',
+        hackathon: 'HackOverflow',
+        problemDomain: 'Security',
+      }),
+    });
+    const blockedTeamData = await blockedTeamRes.json();
+    if (blockedTeamRes.status === 403 && blockedTeamData.message.includes('flagged')) {
+      console.log('✔ PASS: Flagged student was strictly blocked from creating teams (403 Forbidden):', blockedTeamData.message);
+    } else {
+      throw new Error(`FAIL: Expected 403 Forbidden for flagged student team creation, got ${blockedTeamRes.status}`);
+    }
+
+    // Flagged student logs in -> verify warning fields are present
+    const fakeLoginRes = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'imposter.99@nbkrist.org',
+        password: 'password123',
+      }),
+    });
+    const fakeLoginData = await fakeLoginRes.json();
+    if (fakeLoginData.user?.isFlagged === true && fakeLoginData.user?.flagReason.includes('Fake roll number')) {
+      console.log('✔ PASS: Login payload includes warning flag and coordinator reason for user alert');
+    } else {
+      throw new Error(`FAIL: Flag details missing on login: ${JSON.stringify(fakeLoginData)}`);
+    }
+
+    // Admin unflags student
+    const unflagUserRes = await fetch(`${baseUrl}/admin/users/${fakeUserId}/flag`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ isFlagged: false }),
+    });
+    const unflagUserData = await unflagUserRes.json();
+    if (unflagUserRes.status === 200 && unflagUserData.user.isFlagged === false) {
+      console.log('✔ PASS: Admin successfully unflagged student; account restored to good standing');
+    } else {
+      throw new Error(`FAIL: Unflagging student failed: ${JSON.stringify(unflagUserData)}`);
+    }
+
+    // TEST 15: Admin Flags Fake/Spam Team and Blocks Incoming Applications
+    console.log('\n[TEST 15] Testing Admin flagging a spam team and blocking incoming join requests...');
+    // Unflagged student creates a team
+    const newTeamRes = await fetch(`${baseUrl}/teams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${fakeToken}`,
+      },
+      body: JSON.stringify({
+        teamName: 'Spam Target Team',
+        hackathon: 'HackOverflow',
+        problemDomain: 'Web3',
+        requiredMembers: 4,
+      }),
+    });
+    const newTeamData = await newTeamRes.json();
+    const spamTeamId = newTeamData.team._id;
+
+    // Admin flags the team
+    const flagTeamRes = await fetch(`${baseUrl}/admin/teams/${spamTeamId}/flag`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({
+        isFlagged: true,
+        reason: 'Spam registration - duplicate team entry',
+      }),
+    });
+    const flagTeamData = await flagTeamRes.json();
+    if (flagTeamRes.status === 200 && flagTeamData.team.isFlagged === true) {
+      console.log('✔ PASS: Admin successfully flagged spam team:', flagTeamData.team.teamName);
+    } else {
+      throw new Error(`FAIL: Flagging team failed: ${JSON.stringify(flagTeamData)}`);
+    }
+
+    // Another student (Pooja / token2) attempts to request to join this flagged team -> must be blocked
+    const blockedReqRes = await fetch(`${baseUrl}/requests/${spamTeamId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token2}`,
+      },
+      body: JSON.stringify({ message: 'Requesting to join spam team' }),
+    });
+    const blockedReqData = await blockedReqRes.json();
+    if (blockedReqRes.status === 403 && blockedReqData.message.includes('flagged')) {
+      console.log('✔ PASS: Join request to flagged team was blocked (403):', blockedReqData.message);
+    } else {
+      throw new Error(`FAIL: Expected 403 when requesting to join flagged team, got ${blockedReqRes.status}: ${JSON.stringify(blockedReqData)}`);
+    }
+
+    // Admin unflags the team
+    const unflagTeamRes = await fetch(`${baseUrl}/admin/teams/${spamTeamId}/flag`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ isFlagged: false }),
+    });
+    const unflagTeamData = await unflagTeamRes.json();
+    if (unflagTeamRes.status === 200 && unflagTeamData.team.isFlagged === false) {
+      console.log('✔ PASS: Admin successfully unflagged team; team restrictions lifted');
+    } else {
+      throw new Error(`FAIL: Unflagging team failed: ${JSON.stringify(unflagTeamData)}`);
+    }
+
+    // TEST 16: Admin Delete Team Permanently
+    console.log('\n[TEST 16] Testing Admin permanent deletion of a spam/fake team...');
+    const deleteTeamRes = await fetch(`${baseUrl}/admin/teams/${spamTeamId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const deleteTeamData = await deleteTeamRes.json();
+    if (deleteTeamRes.status === 200 && deleteTeamData.success) {
+      console.log('✔ PASS: Admin permanently deleted team:', deleteTeamData.message);
+    } else {
+      throw new Error(`FAIL: Admin team deletion failed: ${JSON.stringify(deleteTeamData)}`);
+    }
+
+    // Verify team is really gone from DB
+    const checkDeletedTeam = await fetch(`${baseUrl}/teams/${spamTeamId}`);
+    if (checkDeletedTeam.status === 404) {
+      console.log('✔ PASS: Verified team no longer exists in catalog (404 Not Found)');
+    } else {
+      throw new Error('FAIL: Deleted team was still returned by server');
+    }
+
+    // TEST 17: Admin Delete Student Account Permanently
+    console.log('\n[TEST 17] Testing Admin permanent deletion of a fake student account...');
+    const deleteUserRes = await fetch(`${baseUrl}/admin/users/${fakeUserId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const deleteUserData = await deleteUserRes.json();
+    if (deleteUserRes.status === 200 && deleteUserData.success) {
+      console.log('✔ PASS: Admin permanently deleted student account:', deleteUserData.message);
+    } else {
+      throw new Error(`FAIL: Admin user deletion failed: ${JSON.stringify(deleteUserData)}`);
+    }
+
+    console.log('\n🎉 ALL 17 TESTS COMPLETED AND PASSED WITH 100% SUCCESS! 🎉');
     server.close();
     process.exit(0);
   } catch (err) {

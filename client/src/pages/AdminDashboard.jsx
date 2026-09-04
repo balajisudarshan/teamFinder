@@ -17,7 +17,11 @@ import {
   MessageSquare,
   Sparkles,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Flag,
+  FlagOff,
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 import SIHBadge from '../components/SIHBadge';
 
@@ -83,6 +87,150 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
 
   // Inspector Modal State
   const [inspectingTeam, setInspectingTeam] = useState(null);
+
+  // Flag Modal State
+  const [flagModal, setFlagModal] = useState({
+    isOpen: false,
+    type: 'user', // 'user' or 'team'
+    item: null,
+    reason: '',
+    submitting: false,
+  });
+
+  const handleOpenFlagModal = (type, item) => {
+    setFlagModal({
+      isOpen: true,
+      type,
+      item,
+      reason: '',
+      submitting: false,
+    });
+  };
+
+  const handleConfirmFlag = async () => {
+    if (!flagModal.item) return;
+    const { type, item, reason } = flagModal;
+    const trimmedReason = reason.trim() || 'Flagged by coordinator for verification';
+
+    setFlagModal((prev) => ({ ...prev, submitting: true }));
+
+    try {
+      if (type === 'user') {
+        const res = await api.put(`/admin/users/${item._id}/flag`, {
+          isFlagged: true,
+          reason: trimmedReason,
+        });
+        if (res.data?.success) {
+          setStudents((prev) =>
+            prev.map((s) => (s._id === item._id ? { ...s, isFlagged: true, flagReason: trimmedReason } : s))
+          );
+          onSuccess && onSuccess(`Student ${item.name} has been flagged: "${trimmedReason}"`);
+        }
+      } else {
+        const res = await api.put(`/admin/teams/${item._id}/flag`, {
+          isFlagged: true,
+          reason: trimmedReason,
+        });
+        if (res.data?.success) {
+          setTeams((prev) =>
+            prev.map((t) => (t._id === item._id ? { ...t, isFlagged: true, flagReason: trimmedReason } : t))
+          );
+          if (inspectingTeam && inspectingTeam._id === item._id) {
+            setInspectingTeam((prev) => ({ ...prev, isFlagged: true, flagReason: trimmedReason }));
+          }
+          onSuccess && onSuccess(`Team "${item.teamName}" has been flagged: "${trimmedReason}"`);
+        }
+      }
+      setFlagModal({ isOpen: false, type: 'user', item: null, reason: '', submitting: false });
+    } catch (err) {
+      alert(err.message || 'Failed to flag item');
+      setFlagModal((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
+  const handleUnflag = async (type, item) => {
+    const confirmText =
+      type === 'user'
+        ? `Unflag student ${item.name} and restore their account to good standing?`
+        : `Unflag team "${item.teamName}" and remove restrictions?`;
+
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      if (type === 'user') {
+        const res = await api.put(`/admin/users/${item._id}/flag`, { isFlagged: false });
+        if (res.data?.success) {
+          setStudents((prev) =>
+            prev.map((s) => (s._id === item._id ? { ...s, isFlagged: false, flagReason: '' } : s))
+          );
+          onSuccess && onSuccess(`Student ${item.name} has been unflagged.`);
+        }
+      } else {
+        const res = await api.put(`/admin/teams/${item._id}/flag`, { isFlagged: false });
+        if (res.data?.success) {
+          setTeams((prev) =>
+            prev.map((t) => (t._id === item._id ? { ...t, isFlagged: false, flagReason: '' } : t))
+          );
+          if (inspectingTeam && inspectingTeam._id === item._id) {
+            setInspectingTeam((prev) => ({ ...prev, isFlagged: false, flagReason: '' }));
+          }
+          onSuccess && onSuccess(`Team "${item.teamName}" has been unflagged.`);
+        }
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to unflag item');
+    }
+  };
+
+  const handleDeleteTeam = async (team) => {
+    const confirmText = `Are you sure you want to PERMANENTLY DELETE team "${team.teamName}"?\n\nThis will remove the team, free up all member slots, and delete all associated applications. This action cannot be undone.`;
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      const res = await api.delete(`/admin/teams/${team._id}`);
+      if (res.data?.success) {
+        setTeams((prev) => prev.filter((t) => t._id !== team._id));
+        setApplications((prev) => prev.filter((a) => a.team?._id !== team._id));
+        if (inspectingTeam && inspectingTeam._id === team._id) {
+          setInspectingTeam(null);
+        }
+        onSuccess && onSuccess(`Team "${team.teamName}" was permanently deleted.`);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete team');
+    }
+  };
+
+  const handleDeleteStudent = async (student) => {
+    const confirmText = `Are you sure you want to PERMANENTLY DELETE student ${student.name} (${student.rollNumber})?\n\nThis will remove their user account, memberships, and applications from the system. This action cannot be undone.`;
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      const res = await api.delete(`/admin/users/${student._id}`);
+      if (res.data?.success) {
+        setStudents((prev) => prev.filter((s) => s._id !== student._id));
+        setApplications((prev) => prev.filter((a) => a.student?._id !== student._id));
+        onSuccess && onSuccess(`Student ${student.name} was permanently deleted.`);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete student');
+    }
+  };
+
+  const handleDeleteApplication = async (app) => {
+    const confirmText = `Are you sure you want to delete this application record by ${app.student?.name || 'student'} for "${app.team?.teamName || 'team'}"?`;
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      const res = await api.delete(`/admin/applications/${app._id}`);
+      if (res.data?.success) {
+        setApplications((prev) => prev.filter((a) => a._id !== app._id));
+        onSuccess && onSuccess('Application record deleted.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete application');
+    }
+  };
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -254,7 +402,7 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
               {stats.sihTeams}
             </p>
             <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-              SIH 2025 Teams
+              SIH 2026 Teams
             </p>
           </div>
 
@@ -367,7 +515,7 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                 className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none"
               >
                 <option value="All">All Events</option>
-                <option value="sih">Smart India Hackathon (SIH)</option>
+                <option value="sih">Smart India Hackathon (SIH 2026)</option>
                 <option value="internal">NBKRIST Internal</option>
               </select>
             </div>
@@ -405,10 +553,23 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                       const isSIH = team.hackathon?.toLowerCase().includes('sih');
 
                       return (
-                        <tr key={team._id} className="hover:bg-slate-50/60">
+                        <tr key={team._id} className={`hover:bg-slate-50/60 ${team.isFlagged ? 'bg-rose-50/40' : ''}`}>
                           <td className="p-3">
-                            <p className="font-semibold text-slate-900">{team.teamName}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-slate-900">{team.teamName}</p>
+                              {team.isFlagged && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                  <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                                  Flagged
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-slate-500 truncate max-w-xs">{team.problemDomain}</p>
+                            {team.isFlagged && team.flagReason && (
+                              <p className="text-[10px] text-rose-700 italic mt-0.5">
+                                Reason: "{team.flagReason}"
+                              </p>
+                            )}
                           </td>
 
                           <td className="p-3 text-slate-600 font-medium">
@@ -452,14 +613,45 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                             </span>
                           </td>
 
-                          <td className="p-3 text-right">
-                            <button
-                              onClick={() => setInspectingTeam(team)}
-                              className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-slate-500" />
-                              <span>Inspect</span>
-                            </button>
+                          <td className="p-3 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              {team.isFlagged ? (
+                                <button
+                                  onClick={() => handleUnflag('team', team)}
+                                  className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold rounded text-xs transition-colors inline-flex items-center gap-1"
+                                  title="Unflag and restore team"
+                                >
+                                  <FlagOff className="w-3 h-3 text-emerald-600" />
+                                  <span>Unflag</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenFlagModal('team', team)}
+                                  className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                                  title="Flag fake or spam team"
+                                >
+                                  <Flag className="w-3 h-3 text-rose-500" />
+                                  <span>Flag</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => setInspectingTeam(team)}
+                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Inspect</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteTeam(team)}
+                                className="px-2 py-1 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                                title="Permanently delete team"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-500" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -531,19 +723,30 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                     <th className="p-3">Department & Year</th>
                     <th className="p-3">Gender</th>
                     <th className="p-3">Skills</th>
+                    <th className="p-3">Account Standing</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="p-8 text-center text-slate-500">
+                      <td colSpan="8" className="p-8 text-center text-slate-500">
                         No students found matching your criteria.
                       </td>
                     </tr>
                   ) : (
                     paginatedStudents.map((st) => (
-                      <tr key={st._id} className="hover:bg-slate-50/60">
-                        <td className="p-3 font-semibold text-slate-900">{st.name}</td>
+                      <tr key={st._id} className={`hover:bg-slate-50/60 ${st.isFlagged ? 'bg-rose-50/40' : ''}`}>
+                        <td className="p-3 font-semibold text-slate-900">
+                          <div className="flex items-center gap-1.5">
+                            <span>{st.name}</span>
+                            {st.isFlagged && (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                Flagged
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 font-mono text-slate-800 font-semibold">{st.rollNumber}</td>
                         <td className="p-3 text-slate-600 font-mono text-[11px]">{st.email}</td>
                         <td className="p-3 text-slate-700">{st.department} • {st.year}</td>
@@ -555,6 +758,57 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
                                 {skill}
                               </span>
                             ))}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          {st.isFlagged ? (
+                            <div className="space-y-0.5 max-w-[170px]">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1">
+                                <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                                Restricted
+                              </span>
+                              {st.flagReason && (
+                                <p className="text-[10px] text-rose-700 italic truncate" title={st.flagReason}>
+                                  "{st.flagReason}"
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              Good Standing
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5">
+                            {st.isFlagged ? (
+                              <button
+                                onClick={() => handleUnflag('user', st)}
+                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold rounded text-xs transition-colors inline-flex items-center gap-1"
+                                title="Unflag student and restore account access"
+                              >
+                                <FlagOff className="w-3 h-3 text-emerald-600" />
+                                <span>Unflag</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenFlagModal('user', st)}
+                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                                title="Flag as fake roll number or unverified account"
+                              >
+                                <Flag className="w-3 h-3 text-rose-500" />
+                                <span>Flag Fake</span>
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleDeleteStudent(st)}
+                              className="px-2.5 py-1 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                              title="Permanently delete student account"
+                            >
+                              <Trash2 className="w-3 h-3 text-rose-500" />
+                              <span>Delete</span>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -858,18 +1112,26 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
 
                           {/* 6. Quick Actions */}
                           <td className="p-3 text-right whitespace-nowrap">
-                            {team ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              {team && (
+                                <button
+                                  onClick={() => setInspectingTeam(team)}
+                                  className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                                  title="Inspect Team Details"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>Inspect</span>
+                                </button>
+                              )}
                               <button
-                                onClick={() => setInspectingTeam(team)}
-                                className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
-                                title="Inspect Team Details"
+                                onClick={() => handleDeleteApplication(app)}
+                                className="px-2 py-1 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 text-slate-600 hover:text-rose-700 font-medium rounded text-xs transition-colors inline-flex items-center gap-1"
+                                title="Delete application record"
                               >
-                                <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Inspect Team</span>
+                                <Trash2 className="w-3 h-3 text-rose-500" />
+                                <span>Delete</span>
                               </button>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -915,6 +1177,29 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
 
             <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
               
+              {/* Flag Warning Banner */}
+              {inspectingTeam.isFlagged && (
+                <div className="bg-rose-50 border border-rose-300 rounded-lg p-3 text-rose-900 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-xs font-bold text-rose-800 uppercase tracking-wide">
+                        Flagged Fake / Restricted Team
+                      </strong>
+                      <span className="text-[10px] text-rose-600 font-medium">
+                        {inspectingTeam.flaggedAt ? new Date(inspectingTeam.flaggedAt).toLocaleDateString() : 'Active Restriction'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-rose-700 mt-0.5">
+                      Reason: <span className="font-semibold">{inspectingTeam.flagReason || 'Flagged by coordinator'}</span>
+                    </p>
+                    <p className="text-[11px] text-rose-600 mt-1">
+                      This team is restricted from accepting new members or receiving applications until unflagged.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Overview */}
               <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
                 <div>
@@ -985,12 +1270,166 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
 
             </div>
 
-            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {inspectingTeam.isFlagged ? (
+                  <button
+                    onClick={() => handleUnflag('team', inspectingTeam)}
+                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold rounded-md text-xs transition-colors inline-flex items-center gap-1.5"
+                    title="Unflag and restore team"
+                  >
+                    <FlagOff className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Unflag Team</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleOpenFlagModal('team', inspectingTeam)}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-semibold rounded-md text-xs transition-colors inline-flex items-center gap-1.5"
+                    title="Flag fake or spam team"
+                  >
+                    <Flag className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Flag Team</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleDeleteTeam(inspectingTeam)}
+                  className="px-3 py-1.5 bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 font-semibold rounded-md text-xs transition-colors inline-flex items-center gap-1.5"
+                  title="Permanently delete team"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Delete Team</span>
+                </button>
+              </div>
               <button
                 onClick={() => setInspectingTeam(null)}
                 className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md text-xs font-semibold"
               >
                 Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Flag / Moderation Action Modal */}
+      {flagModal.isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl border border-rose-200 overflow-hidden">
+            
+            <div className="px-5 py-3.5 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-rose-100 rounded-lg text-rose-600">
+                  <Flag className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    {flagModal.type === 'user' ? 'Flag Student Account' : 'Flag Team Registration'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Coordinator Moderation & Quality Control
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setFlagModal({ isOpen: false, type: 'user', item: null, reason: '', submitting: false })}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3.5 text-xs">
+              {/* Target info card */}
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Target Entity
+                </span>
+                <div className="font-semibold text-slate-800 text-sm">
+                  {flagModal.type === 'user' ? flagModal.item?.name : flagModal.item?.teamName}
+                </div>
+                <div className="text-slate-500 font-mono text-[11px]">
+                  {flagModal.type === 'user'
+                    ? `Roll No: ${flagModal.item?.rollNumber} • Dept: ${flagModal.item?.department}`
+                    : `Hackathon: ${flagModal.item?.hackathon} • Leader: ${flagModal.item?.leader?.name || 'N/A'}`}
+                </div>
+              </div>
+
+              {/* Consequence warning */}
+              <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 flex items-start gap-2 text-[11px]">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <p>
+                  Flagged accounts will immediately see an official warning upon login explaining this reason and won't be able to create teams or submit join requests until unflagged.
+                </p>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-700 block text-[11px]">
+                  Quick Presets:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(flagModal.type === 'user'
+                    ? [
+                        'Fake Roll Number',
+                        'Unverified Student Identity',
+                        'Misleading Skills / Experience',
+                        'Code of Conduct Violation',
+                        'Duplicate Account'
+                      ]
+                    : [
+                        'Fake / Spam Team',
+                        'Duplicate Registration',
+                        'Invalid Hackathon Selection',
+                        'Inappropriate Team Name',
+                        'Inactive / Ghost Team'
+                      ]
+                  ).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setFlagModal((prev) => ({ ...prev, reason: preset }))}
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[11px] text-slate-600 transition-colors"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reason Textarea */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 block text-[11px]">
+                  Specific Reason <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={flagModal.reason}
+                  onChange={(e) => setFlagModal((prev) => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Explain why this student or team is being flagged (displayed directly to them upon login)..."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setFlagModal({ isOpen: false, type: 'user', item: null, reason: '', submitting: false })}
+                disabled={flagModal.submitting}
+                className="px-3.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-md text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmFlag}
+                disabled={flagModal.submitting}
+                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 shadow-xs"
+              >
+                <Flag className="w-3.5 h-3.5" />
+                <span>{flagModal.submitting ? 'Applying Flag...' : 'Confirm & Apply Flag'}</span>
               </button>
             </div>
 

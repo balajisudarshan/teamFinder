@@ -9,7 +9,8 @@ import {
   UserMinus, 
   Send,
   PlusCircle,
-  Inbox
+  Inbox,
+  AlertTriangle
 } from 'lucide-react';
 import SIHBadge from '../components/SIHBadge';
 
@@ -211,6 +212,29 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
                     </button>
                   </div>
 
+                  {team.isFlagged && (
+                    <div className="mx-4 sm:mx-5 mt-4 p-3 bg-amber-50 border border-amber-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                        <div>
+                          <p className="text-xs font-bold text-amber-950">
+                            Team Flagged: "{team.flagReason || 'Under review by faculty coordinator'}"
+                          </p>
+                          <p className="text-[11px] text-amber-800">
+                            New join requests are blocked until unflagged. Personal student accounts remain usable.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new Event('open-flag-alert'))}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-md shadow-xs transition-colors shrink-0 cursor-pointer"
+                      >
+                        View Notice & Contact
+                      </button>
+                    </div>
+                  )}
+
                   <div className="p-5 space-y-5">
                     
                     {/* Incoming Join Requests */}
@@ -361,22 +385,47 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
             memberTeams.map((team) => (
               <div
                 key={team._id}
-                className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs"
+                className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3"
               >
-                <div className="space-y-1">
-                  <SIHBadge team={team} />
-                  <h3 className="text-base font-bold text-slate-900">{team.teamName}</h3>
-                  <p className="text-xs text-slate-500">
-                    Leader: <strong className="text-slate-700">{team.leader?.name} ({team.leader?.rollNumber})</strong> • Domain: {team.problemDomain}
-                  </p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <SIHBadge team={team} />
+                    <h3 className="text-base font-bold text-slate-900">{team.teamName}</h3>
+                    <p className="text-xs text-slate-500">
+                      Leader: <strong className="text-slate-700">{team.leader?.name} ({team.leader?.rollNumber})</strong> • Domain: {team.problemDomain}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => onSelectTeam(team)}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-md transition-colors self-start md:self-auto"
+                  >
+                    View Team Roster
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => onSelectTeam(team)}
-                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-md transition-colors self-start md:self-auto"
-                >
-                  View Team Roster
-                </button>
+                {team.isFlagged && (
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                      <div>
+                        <p className="font-bold text-amber-950">
+                          Team Flagged: "{team.flagReason || 'Under coordinator review'}"
+                        </p>
+                        <p className="text-[11px] text-amber-800">
+                          This team is under review. Your personal student account is not blocked.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new Event('open-flag-alert'))}
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded shadow-xs transition-colors shrink-0 cursor-pointer"
+                    >
+                      View Notice & Contact
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           )}

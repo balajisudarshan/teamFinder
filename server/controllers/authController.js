@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Team = require('../models/Team');
 
 const generateToken = (id, role) => {
   return jwt.sign(
@@ -76,7 +77,7 @@ const registerUser = async (req, res) => {
       gender,
       skills: parsedSkills,
       bio: bio ? bio.trim() : '',
-      role: (req.body.role === 'admin' || email === 'admin@nbkrist.org' || email === 'coordinator@nbkrist.org') ? 'admin' : 'student',
+      role: (req.body.role === 'admin' || email === '24kb1a0517@nbkrist.org' || email === 'admin@nbkrist.org' || email === 'coordinator@nbkrist.org') ? 'admin' : 'student',
     });
 
     res.status(201).json({
@@ -94,6 +95,9 @@ const registerUser = async (req, res) => {
         skills: user.skills,
         bio: user.bio,
         role: user.role,
+        isFlagged: user.isFlagged || false,
+        flagReason: user.flagReason || '',
+        flaggedAt: user.flaggedAt || null,
       },
     });
   } catch (error) {
@@ -138,6 +142,8 @@ const loginUser = async (req, res) => {
       });
     }
 
+    const myTeam = await Team.findOne({ members: user._id }).select('teamName hackathon isFlagged flagReason flaggedAt leader');
+
     res.json({
       success: true,
       message: 'Logged in successfully',
@@ -153,6 +159,18 @@ const loginUser = async (req, res) => {
         skills: user.skills,
         bio: user.bio,
         role: user.role,
+        isFlagged: user.isFlagged || false,
+        flagReason: user.flagReason || '',
+        flaggedAt: user.flaggedAt || null,
+        team: myTeam ? {
+          _id: myTeam._id,
+          teamName: myTeam.teamName,
+          hackathon: myTeam.hackathon,
+          isFlagged: Boolean(myTeam.isFlagged),
+          flagReason: myTeam.flagReason || '',
+          flaggedAt: myTeam.flaggedAt || null,
+          isLeader: myTeam.leader?.toString() === user._id.toString(),
+        } : null,
       },
     });
   } catch (error) {
@@ -170,9 +188,26 @@ const loginUser = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const myTeam = await Team.findOne({ members: user._id }).select('teamName hackathon isFlagged flagReason flaggedAt leader');
+
     res.json({
       success: true,
-      user,
+      user: {
+        ...user.toObject(),
+        team: myTeam ? {
+          _id: myTeam._id,
+          teamName: myTeam.teamName,
+          hackathon: myTeam.hackathon,
+          isFlagged: Boolean(myTeam.isFlagged),
+          flagReason: myTeam.flagReason || '',
+          flaggedAt: myTeam.flaggedAt || null,
+          isLeader: myTeam.leader?.toString() === user._id.toString(),
+        } : null,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

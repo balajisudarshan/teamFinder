@@ -27,7 +27,11 @@ export default function Login({ setActivePage, onSuccess }) {
       } else {
         setActivePage('teams');
       }
-      onSuccess && onSuccess('Logged in successfully!');
+      if (loggedUser?.isFlagged) {
+        onSuccess && onSuccess(`Warning: Your account has been flagged by the coordinator: "${loggedUser.flagReason || 'Under Review'}".`);
+      } else {
+        onSuccess && onSuccess('Logged in successfully!');
+      }
     } catch (err) {
       setError(err.message || 'Login failed. Please verify credentials.');
     } finally {

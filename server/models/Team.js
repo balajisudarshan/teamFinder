@@ -68,6 +68,19 @@ const teamSchema = new mongoose.Schema(
       enum: ['open', 'full', 'completed'],
       default: 'open',
     },
+    isFlagged: {
+      type: Boolean,
+      default: false,
+    },
+    flagReason: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    flaggedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

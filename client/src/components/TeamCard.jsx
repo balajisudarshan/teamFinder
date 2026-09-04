@@ -66,16 +66,30 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
             </p>
           </div>
 
-          <span
-            className={`px-2 py-0.5 rounded text-[11px] font-medium shrink-0 ${
-              isFull
-                ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
-            }`}
-          >
-            {team.status === 'full' ? 'Team Full' : 'Looking for peers'}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            {team.isFlagged ? (
+              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-850 border border-rose-300 text-rose-800 flex items-center gap-1 shrink-0">
+                ⚠️ Flagged Team
+              </span>
+            ) : (
+              <span
+                className={`px-2 py-0.5 rounded text-[11px] font-medium shrink-0 ${
+                  isFull
+                    ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
+                }`}
+              >
+                {team.status === 'full' ? 'Team Full' : 'Looking for peers'}
+              </span>
+            )}
+          </div>
         </div>
+
+        {team.isFlagged && team.flagReason && (
+          <div className="p-2 bg-rose-50 border border-rose-200 rounded text-[11px] text-rose-800">
+            <strong>Coordinator Notice:</strong> {team.flagReason}
+          </div>
+        )}
 
         {/* Hackathon & SIH Badge */}
         <div className="pt-0.5">
@@ -196,13 +210,27 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
         </div>
 
         {!isMember && !isFull && (
-          <button
-            onClick={() => onRequestJoin(team)}
-            className="py-1.5 px-3 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-md shadow-xs transition-colors flex items-center gap-1"
-          >
-            <span>Request to Join</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
+          team.isFlagged ? (
+            <span className="py-1.5 px-2.5 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-md">
+              Restricted (Flagged)
+            </span>
+          ) : user?.isFlagged ? (
+            <button
+              disabled
+              title="Your account is flagged by the coordinator"
+              className="py-1.5 px-3 text-xs font-semibold text-slate-400 bg-slate-100 rounded-md cursor-not-allowed"
+            >
+              Locked (Flagged)
+            </button>
+          ) : (
+            <button
+              onClick={() => onRequestJoin(team)}
+              className="py-1.5 px-3 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-md shadow-xs transition-colors flex items-center gap-1"
+            >
+              <span>Request to Join</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )
         )}
 
         {isMember && (

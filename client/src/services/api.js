@@ -30,10 +30,16 @@ api.interceptors.response.use(
       error.message ||
       'An unexpected error occurred';
     
-    // If unauthorized, could clear token if needed
-    if (error.response?.status === 401) {
-      // Avoid redirect loops, but clear stale token if logged out
+    // If action rejected because account or team is flagged, broadcast immediately
+    if (
+      error.response?.status === 403 &&
+      (message.toLowerCase().includes('flagged') || error.response?.data?.isFlagged)
+    ) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('account-flagged', { detail: { message } }));
+      }
     }
+
     return Promise.reject(new Error(message));
   }
 );
