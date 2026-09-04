@@ -17,10 +17,14 @@ const registerUser = async (req, res) => {
   try {
     let { name, rollNumber, email, password, department, year, gender, skills, bio } = req.body;
 
+    if (rollNumber && !email) {
+      email = `${rollNumber.trim().toLowerCase()}@nbkrist.org`;
+    }
+
     if (!name || !rollNumber || !email || !password || !department || !year || !gender) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill in all required fields (name, roll number, email, password, department, year, gender)',
+        message: 'Please fill in all required fields (name, roll number, password, department, year, gender)',
       });
     }
 
@@ -119,18 +123,26 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both email and password',
+        message: 'Please provide both roll number / email and password',
       });
     }
 
-    email = email.trim().toLowerCase();
+    const identifier = email.trim().toLowerCase();
+    const candidateEmail = identifier.includes('@') ? identifier : `${identifier}@nbkrist.org`;
+    const candidateRoll = identifier.toUpperCase();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      $or: [
+        { email: candidateEmail },
+        { rollNumber: candidateRoll },
+        { email: identifier },
+      ],
+    });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Invalid roll number / email or password',
       });
     }
 
@@ -138,7 +150,7 @@ const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Invalid roll number / email or password',
       });
     }
 

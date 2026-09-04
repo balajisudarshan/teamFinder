@@ -17,7 +17,6 @@ export default function Register({ setActivePage, onSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
     rollNumber: '',
-    email: '',
     password: '',
     department: 'CSE',
     year: '3rd Year',
@@ -34,14 +33,17 @@ export default function Register({ setActivePage, onSuccess }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const isEmailValidNBKRIST = formData.email.trim().toLowerCase().endsWith('@nbkrist.org');
+  const autoEmail = formData.rollNumber.trim()
+    ? `${formData.rollNumber.trim().toLowerCase()}@nbkrist.org`
+    : 'rollnumber@nbkrist.org';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!isEmailValidNBKRIST) {
-      setError('Registration is strictly restricted to NBKRIST students. Your email must end with @nbkrist.org');
+    const cleanRoll = formData.rollNumber.trim().toUpperCase();
+    if (!cleanRoll) {
+      setError('Please enter your university roll number');
       return;
     }
 
@@ -50,10 +52,16 @@ export default function Register({ setActivePage, onSuccess }) {
       return;
     }
 
+    const email = `${cleanRoll.toLowerCase()}@nbkrist.org`;
+
     setLoading(true);
 
     try {
-      await register(formData);
+      await register({
+        ...formData,
+        rollNumber: cleanRoll,
+        email,
+      });
       onSuccess && onSuccess('Account created successfully! Welcome to TeamFinder.');
       setActivePage('teams');
     } catch (err) {
@@ -87,9 +95,9 @@ export default function Register({ setActivePage, onSuccess }) {
           <div className="p-3 bg-slate-50 rounded-md border border-slate-200 text-xs text-slate-700 flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
             <div className="text-[11px] leading-relaxed">
-              <strong className="block text-slate-900 font-semibold">Institutional Verification Required</strong>
+              <strong className="block text-slate-900 font-semibold">Institutional Verification</strong>
               <span>
-                To ensure academic record verification for SIH nodal submission, accounts require an official email ending with <strong>@nbkrist.org</strong>.
+                Your college email is automatically assigned as <strong>rollnumber@nbkrist.org</strong> for SIH nodal submission and academic record verification.
               </span>
             </div>
           </div>
@@ -126,9 +134,12 @@ export default function Register({ setActivePage, onSuccess }) {
 
               {/* Roll Number */}
               <div className="space-y-1">
-                <label className="block font-semibold text-slate-700">
-                  Roll Number: *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold text-slate-700">
+                    Roll Number: *
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">NBKRIST ID</span>
+                </div>
                 <div className="relative">
                   <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -138,61 +149,44 @@ export default function Register({ setActivePage, onSuccess }) {
                     value={formData.rollNumber}
                     onChange={handleChange}
                     placeholder="e.g. 22KB1A0542"
-                    className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 uppercase font-mono focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
+                    className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 uppercase font-mono tracking-wider focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
                   />
                 </div>
               </div>
 
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              
-              {/* College Email */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="block font-semibold text-slate-700">
-                    College Email: *
-                  </label>
-                  {formData.email && (
-                    <span className={`text-[10px] font-semibold ${isEmailValidNBKRIST ? 'text-emerald-700' : 'text-rose-600'}`}>
-                      {isEmailValidNBKRIST ? 'Valid Domain' : 'Must be @nbkrist.org'}
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="rollnumber@nbkrist.org"
-                    className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
-                  />
-                </div>
+            {/* Auto-Linked Institutional Email Callout */}
+            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-slate-500 shrink-0" />
+                <span className="text-slate-600 text-[11px]">
+                  Institutional Email (Auto-generated):
+                </span>
               </div>
+              <span className="font-mono text-slate-900 font-bold bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                {autoEmail}
+              </span>
+            </div>
 
-              {/* Password */}
-              <div className="space-y-1">
-                <label className="block font-semibold text-slate-700">
-                  Password (min 6 chars): *
-                </label>
-                <div className="relative">
-                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    minLength={6}
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
-                  />
-                </div>
+            {/* Password */}
+            <div className="space-y-1">
+              <label className="block font-semibold text-slate-700">
+                Password (min 6 chars): *
+              </label>
+              <div className="relative">
+                <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  minLength={6}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
+                />
               </div>
-
             </div>
 
             {/* Academic Details */}
