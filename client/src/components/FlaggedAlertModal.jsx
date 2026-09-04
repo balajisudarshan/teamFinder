@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  ShieldAlert, 
-  AlertTriangle, 
-  RefreshCw, 
-  Mail, 
-  LogOut, 
+import {
+  ShieldAlert,
+  AlertTriangle,
+  RefreshCw,
+  Mail,
+  LogOut,
   Lock,
   CheckCircle2,
   Copy,
@@ -16,16 +16,16 @@ import {
 } from 'lucide-react';
 
 export default function FlaggedAlertModal() {
-  const { 
-    user, 
-    isFlagged, 
-    flagReason, 
-    isTeamFlagged, 
-    teamFlagReason, 
+  const {
+    user,
+    isFlagged,
+    flagReason,
+    isTeamFlagged,
+    teamFlagReason,
     flaggedTeamName,
-    hasActiveFlag, 
-    refreshUser, 
-    logout 
+    hasActiveFlag,
+    refreshUser,
+    logout
   } = useAuth();
 
   const [checking, setChecking] = useState(false);
@@ -80,7 +80,7 @@ export default function FlaggedAlertModal() {
 
   const coordinatorEmail = '24kb1a0517@nbkrist.org';
   const plainSubject = `NBKRIST TeamFinder - Flag Review Request (${user?.rollNumber || 'Student'})`;
-  const plainBody = `Respected Faculty Coordinator,\n\nMy name is ${user?.name || 'Student'} (${user?.rollNumber || ''}, ${user?.department || ''} - ${user?.year || ''}).\nMy ${isFlagged ? 'account' : 'team'} was flagged on the TeamFinder portal with the following reason:\n"${isFlagged ? (flagReason || 'Under Review') : (teamFlagReason || 'Flagged Team')}"\n\nPlease review the verification details and restore standing.\n\nThank you,\n${user?.name || 'Student'}\nRoll No: ${user?.rollNumber || ''}\nEmail: ${user?.email || ''}`;
+  const plainBody = `Respected SIH Coordinator,\n\nMy name is ${user?.name || 'Student'} (${user?.rollNumber || ''}, ${user?.department || ''} - ${user?.year || ''}).\nMy ${isFlagged ? 'account' : 'team'} was flagged on the TeamFinder portal with the following reason:\n"${isFlagged ? (flagReason || 'Under Review') : (teamFlagReason || 'Flagged Team')}"\n\nPlease review the verification details and restore standing.\n\nThank you,\n${user?.name || 'Student'}\nRoll No: ${user?.rollNumber || ''}\nEmail: ${user?.email || ''}`;
 
   const mailSubject = encodeURIComponent(plainSubject);
   const mailBody = encodeURIComponent(plainBody);
@@ -102,16 +102,14 @@ export default function FlaggedAlertModal() {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={`bg-white rounded-2xl max-w-lg w-full shadow-2xl border-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] ${
-        isFlagged ? 'border-rose-500' : 'border-amber-500'
-      }`}>
-        
+      <div className={`bg-white rounded-2xl max-w-lg w-full shadow-2xl border-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] ${isFlagged ? 'border-rose-500' : 'border-amber-500'
+        }`}>
+
         {/* Header Alert Strip */}
-        <div className={`px-6 py-4 sm:py-5 text-white flex items-center justify-between shrink-0 ${
-          isFlagged 
+        <div className={`px-6 py-4 sm:py-5 text-white flex items-center justify-between shrink-0 ${isFlagged
             ? 'bg-gradient-to-r from-rose-600 via-rose-700 to-red-700'
             : 'bg-gradient-to-r from-amber-600 via-rose-600 to-rose-700'
-        }`}>
+          }`}>
           <div className="flex items-center gap-3.5">
             <div className="p-2.5 bg-white/15 rounded-xl border border-white/20 shrink-0">
               <ShieldAlert className="w-7 h-7 text-white" />
@@ -142,7 +140,7 @@ export default function FlaggedAlertModal() {
 
         {/* Scrollable Content Body */}
         <div className="p-5 sm:p-6 space-y-4 text-xs text-slate-700 overflow-y-auto flex-1">
-          
+
           {/* Target Student Identity Info */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between">
             <div>
@@ -166,13 +164,11 @@ export default function FlaggedAlertModal() {
           </div>
 
           {/* Prominent Official Reason Box */}
-          <div className={`rounded-xl p-4 space-y-1.5 border ${
-            isFlagged ? 'bg-rose-50/90 border-rose-300' : 'bg-amber-50/90 border-amber-300'
-          }`}>
+          <div className={`rounded-xl p-4 space-y-1.5 border ${isFlagged ? 'bg-rose-50/90 border-rose-300' : 'bg-amber-50/90 border-amber-300'
+            }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-                isFlagged ? 'text-rose-900' : 'text-amber-900'
-              }`}>
+              <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isFlagged ? 'text-rose-900' : 'text-amber-900'
+                }`}>
                 <AlertTriangle className={`w-3.5 h-3.5 ${isFlagged ? 'text-rose-600' : 'text-amber-600'}`} />
                 Coordinator Reason:
               </span>
@@ -180,9 +176,8 @@ export default function FlaggedAlertModal() {
                 {user?.flaggedAt ? new Date(user.flaggedAt).toLocaleDateString() : 'Active Flag'}
               </span>
             </div>
-            <p className={`text-sm font-bold font-serif italic bg-white/70 p-3 rounded-lg border ${
-              isFlagged ? 'text-rose-950 border-rose-200' : 'text-amber-950 border-amber-200'
-            }`}>
+            <p className={`text-sm font-bold font-serif italic bg-white/70 p-3 rounded-lg border ${isFlagged ? 'text-rose-950 border-rose-200' : 'text-amber-950 border-amber-200'
+              }`}>
               "{isFlagged ? (flagReason || 'Unverified student roll number or policy concern') : (teamFlagReason || 'Flagged team registration')}"
             </p>
           </div>
@@ -205,11 +200,10 @@ export default function FlaggedAlertModal() {
 
           {/* Status Feedback Message */}
           {checkResult && (
-            <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 border ${
-              checkResult.success
+            <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 border ${checkResult.success
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                 : 'bg-rose-50 text-rose-800 border-rose-300'
-            }`}>
+              }`}>
               {checkResult.success ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               ) : (
@@ -239,7 +233,7 @@ export default function FlaggedAlertModal() {
 
             {showAppealDetails && (
               <div className="p-4 space-y-3 bg-white text-xs">
-                
+
                 {/* Coordinator Email Row */}
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
@@ -269,7 +263,7 @@ export default function FlaggedAlertModal() {
 
                 {/* Direct Action Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                  
+
                   {/* Gmail Web Compose Button (100% reliable in any browser) */}
                   <a
                     href={gmailComposeUrl}
@@ -322,7 +316,7 @@ export default function FlaggedAlertModal() {
 
         {/* Modal Action Footer */}
         <div className="px-5 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
-          
+
           <button
             type="button"
             onClick={logout}

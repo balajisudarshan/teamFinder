@@ -144,7 +144,7 @@ function MainApp() {
 
             <div className="shrink-0 flex items-center gap-2 self-start md:self-auto">
               <a
-                href={`https://mail.google.com/mail/?view=cm&fs=1&to=24kb1a0517@nbkrist.org&su=${encodeURIComponent('NBKRIST TeamFinder - Account Flag Appeal')}&body=${encodeURIComponent('Respected Faculty Coordinator,\n\nMy account was flagged on the TeamFinder portal. Please review my verification details and restore my account standing.\n\nThank you.')}`}
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=24kb1a0517@nbkrist.org&su=${encodeURIComponent('NBKRIST TeamFinder - Account Flag Appeal')}&body=${encodeURIComponent('Respected SIH Coordinator,\n\nMy account was flagged on the TeamFinder portal. Please review my verification details and restore my account standing.\n\nThank you.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold rounded-md shadow-xs transition-colors flex items-center gap-1.5"
