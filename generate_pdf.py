@@ -253,7 +253,7 @@ def generate_pdf(output_filename):
     story.append(Paragraph("2. Student Registration & Academic Onboarding", h1_style))
     story.append(HRFlowable(width="100%", thickness=1, color=c_navy, spaceBefore=2, spaceAfter=6))
     story.append(Paragraph("• <b>Institutional Domain:</b> Registration strictly requires an official NBKRIST email (e.g. <code>22kb1a0542@nbkrist.org</code>). Personal emails are blocked to prevent impersonation.", bullet_style))
-    story.append(Paragraph("• <b>Roll Number:</b> Enter your exact university roll number (e.g. <code>22KB1A0542</code>). This is tied directly to faculty export sheets.", bullet_style))
+    story.append(Paragraph("• <b>Roll Number:</b> Enter your exact College roll number (e.g. <code>22KB1A0542</code>). This is tied directly to faculty export sheets.", bullet_style))
     story.append(Paragraph("• <b>Branch & Year:</b> Choose your department (CSE, ECE, EEE, AI&DS, IT, MECH, CIVIL) and year (1st to 4th).", bullet_style))
     story.append(Paragraph("• <b>Gender (SIH Verification):</b> Accurately specify your gender for automated SIH female teammate tracking.", bullet_style))
     story.append(Paragraph("• <b>Interactive Skill Chips:</b> Instead of guessing, click one-tap chips (e.g. <i>Web Dev, Python, IoT & Arduino, 3D CAD / SolidWorks, UI/UX & Figma, Pitching & PPT, Documentation</i>) to populate your profile.", bullet_style))

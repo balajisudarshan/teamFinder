@@ -162,8 +162,8 @@ export default function Register({ setActivePage, onSuccess }) {
             type="button"
             onClick={() => { setActiveTab('oauth'); setError(''); }}
             className={`py-2 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === 'oauth'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
               }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
@@ -173,8 +173,8 @@ export default function Register({ setActivePage, onSuccess }) {
             type="button"
             onClick={() => { setActiveTab('otp'); setError(''); }}
             className={`py-2 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === 'otp'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-white text-slate-900 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
               }`}
           >
             <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
@@ -238,7 +238,7 @@ export default function Register({ setActivePage, onSuccess }) {
                   <span>First-Year & Newcomer Provisional Verification</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  While college IT is setting up your official <code>@nbkrist.org</code> inbox, you can register using your <strong>University Roll Number</strong> and receive a 6-digit OTP code on your personal email.
+                  While college IT is setting up your official <code>@nbkrist.org</code> inbox, you can register using your <strong>College Roll Number</strong> and receive a 6-digit OTP code on your personal email.
                 </p>
               </div>
 
@@ -248,7 +248,7 @@ export default function Register({ setActivePage, onSuccess }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="block font-semibold text-slate-700">
-                        University Roll Number: *
+                        College Roll Number: *
                       </label>
                       <div className="relative">
                         <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -491,8 +491,8 @@ export default function Register({ setActivePage, onSuccess }) {
                             key={skill}
                             onClick={toggleSkill}
                             className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${isSelected
-                                ? 'bg-slate-900 text-white border-slate-900 font-semibold'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              ? 'bg-slate-900 text-white border-slate-900 font-semibold'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                               }`}
                           >
                             {isSelected ? '✓ ' : '+ '}{skill}
