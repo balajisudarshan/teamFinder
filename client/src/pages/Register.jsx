@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
-import { 
-  UserPlus, 
-  Mail, 
-  Lock, 
-  User, 
-  Hash, 
+import {
+  UserPlus,
+  Mail,
+  Lock,
+  User,
+  Hash,
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
@@ -142,7 +142,7 @@ export default function Register({ setActivePage, onSuccess }) {
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
       <div className="max-w-xl w-full space-y-4">
-        
+
         {/* Header */}
         <div className="text-center space-y-1">
           <div className="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center mx-auto shadow-xs">
@@ -152,7 +152,7 @@ export default function Register({ setActivePage, onSuccess }) {
             Student Registration
           </h2>
           <p className="text-xs text-slate-500">
-            Official N.B.K.R. Institute of Science & Technology hackathon directory
+            N.B.K.R. Institute of Science & Technology hackathon directory
           </p>
         </div>
 
@@ -161,11 +161,10 @@ export default function Register({ setActivePage, onSuccess }) {
           <button
             type="button"
             onClick={() => { setActiveTab('oauth'); setError(''); }}
-            className={`py-2 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'oauth'
+            className={`py-2 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === 'oauth'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
             <span>Seniors (Google Account)</span>
@@ -173,11 +172,10 @@ export default function Register({ setActivePage, onSuccess }) {
           <button
             type="button"
             onClick={() => { setActiveTab('otp'); setError(''); }}
-            className={`py-2 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'otp'
+            className={`py-2 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${activeTab === 'otp'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
             <span>1st Year / Pending Mail</span>
@@ -186,7 +184,7 @@ export default function Register({ setActivePage, onSuccess }) {
 
         {/* Form Box */}
         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs space-y-4">
-          
+
           {error && (
             <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-md text-rose-800 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -492,11 +490,10 @@ export default function Register({ setActivePage, onSuccess }) {
                             type="button"
                             key={skill}
                             onClick={toggleSkill}
-                            className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
-                              isSelected
+                            className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${isSelected
                                 ? 'bg-slate-900 text-white border-slate-900 font-semibold'
                                 : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                            }`}
+                              }`}
                           >
                             {isSelected ? '✓ ' : '+ '}{skill}
                           </button>
