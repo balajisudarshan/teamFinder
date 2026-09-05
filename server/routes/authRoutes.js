@@ -6,6 +6,7 @@ const {
   getUserProfile,
   updateUserProfile,
   googleAuth,
+  googleJuniorAuth,
   sendRegistrationOtp,
   verifyOtpAndRegister,
   sendForgotPasswordOtp,
@@ -18,6 +19,7 @@ const { authLimiter } = require('../middleware/rateLimiter');
 router.post('/register', authLimiter, registerUser);
 router.post('/login', authLimiter, loginUser);
 router.post('/google', authLimiter, googleAuth);
+router.post('/google-junior', authLimiter, googleJuniorAuth);
 router.post('/send-otp', authLimiter, sendRegistrationOtp);
 router.post('/verify-otp-register', authLimiter, verifyOtpAndRegister);
 router.post('/forgot-password-otp', authLimiter, sendForgotPasswordOtp);

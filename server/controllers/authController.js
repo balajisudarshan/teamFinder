@@ -336,24 +336,27 @@ const googleAuth = async (req, res) => {
 
     const email = payload.email.trim().toLowerCase();
 
-    // Strict domain check: Only @nbkrist.org permitted
-    if (!email.endsWith('@nbkrist.org')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access restricted strictly to NBKRIST college accounts. Please sign in using your @nbkrist.org email.',
-      });
-    }
+    const rollCandidate = email.endsWith('@nbkrist.org')
+      ? email.split('@')[0].toUpperCase()
+      : null;
 
-    const rollCandidate = email.split('@')[0].toUpperCase();
-
-    // Match existing account by email, rollNumber, or googleId (seamless link for existing production users)
+    // Match existing account by email, personalEmail, rollNumber, or googleId
     let user = await User.findOne({
       $or: [
-        { email },
-        { rollNumber: rollCandidate },
         { googleId: payload.sub },
+        { personalEmail: email },
+        { email },
+        ...(rollCandidate ? [{ rollNumber: rollCandidate }] : []),
       ],
     });
+
+    // If new user and not on @nbkrist.org domain, require registering via the Junior tab
+    if (!user && !email.endsWith('@nbkrist.org')) {
+      return res.status(403).json({
+        success: false,
+        message: 'This personal Google account is not registered yet. 1st Years / Juniors: please register under the "1st Year / Juniors" tab with your College Roll Number.',
+      });
+    }
 
     if (user) {
       // If user has not yet stored googleId, link it
@@ -362,7 +365,7 @@ const googleAuth = async (req, res) => {
         await user.save();
       }
     } else {
-      // Auto-register new senior/staff from Google OAuth
+      // Auto-register new senior/staff from Google OAuth (@nbkrist.org)
       const department = deduceDepartment(rollCandidate);
       const year = deduceYear(rollCandidate);
       const isAdmin = (
@@ -421,6 +424,146 @@ const googleAuth = async (req, res) => {
     });
   } catch (error) {
     console.error('Google OAuth error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Google authentication failed',
+    });
+  }
+};
+
+// @desc    Register / Authenticate 1st Year / Junior with Google (Any email permitted)
+// @route   POST /api/auth/google-junior
+// @access  Public
+const googleJuniorAuth = async (req, res) => {
+  try {
+    const { credential, rollNumber, department, year, gender, skills, bio } = req.body;
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential token is required',
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Google authentication token',
+      });
+    }
+
+    const personalEmail = payload.email.trim().toLowerCase();
+
+    // Check if user is already registered with this googleId or personalEmail
+    let user = await User.findOne({
+      $or: [
+        { googleId: payload.sub },
+        { personalEmail },
+      ],
+    });
+
+    if (user) {
+      // If user exists, ensure googleId is set
+      if (!user.googleId) {
+        user.googleId = payload.sub;
+        await user.save();
+      }
+    } else {
+      // New Junior Registration requires a valid College Roll Number
+      if (!rollNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide your College Roll Number (e.g. 26KB1A0546) to register your profile.',
+        });
+      }
+
+      const cleanRoll = rollNumber.trim().toUpperCase();
+      const rollRegex = /^[0-9]{2}KB[15]A[0-9]{2}[0-9A-Z]{2}$/i;
+      if (!rollRegex.test(cleanRoll)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid NBKRIST roll number format (e.g. 26KB1A0546 for regular or 25KB5A0546 for lateral entry)',
+        });
+      }
+
+      const collegeEmail = `${cleanRoll.toLowerCase()}@nbkrist.org`;
+
+      // Check if roll number or college email is already registered
+      const existingRoll = await User.findOne({
+        $or: [{ rollNumber: cleanRoll }, { email: collegeEmail }],
+      });
+
+      if (existingRoll) {
+        return res.status(400).json({
+          success: false,
+          message: `Roll number ${cleanRoll} is already registered. If this is your account, please log in with your credentials.`,
+        });
+      }
+
+      let parsedSkills = [];
+      if (Array.isArray(skills)) {
+        parsedSkills = skills.map((s) => s.trim()).filter(Boolean);
+      } else if (typeof skills === 'string' && skills.trim()) {
+        parsedSkills = skills.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+
+      user = await User.create({
+        name: (payload.name && payload.name.trim()) || cleanRoll,
+        rollNumber: cleanRoll,
+        email: collegeEmail,
+        personalEmail,
+        authProvider: 'google',
+        googleId: payload.sub,
+        department: department || deduceDepartment(cleanRoll),
+        year: year || '1st Year',
+        gender: gender || 'Other',
+        skills: parsedSkills,
+        bio: (bio && bio.trim()) || '',
+        role: 'student',
+        isEmailVerified: true,
+      });
+    }
+
+    const myTeam = await Team.findOne({ members: user._id }).select('teamName hackathon isFlagged flagReason flaggedAt leader');
+
+    res.json({
+      success: true,
+      message: 'Logged in with Google successfully',
+      token: generateToken(user._id, user.role),
+      user: {
+        _id: user._id,
+        name: user.name,
+        rollNumber: user.rollNumber,
+        email: user.email,
+        personalEmail: user.personalEmail,
+        department: user.department,
+        year: user.year,
+        gender: user.gender,
+        skills: user.skills,
+        bio: user.bio,
+        role: user.role,
+        googleId: user.googleId,
+        isFlagged: user.isFlagged || false,
+        flagReason: user.flagReason || '',
+        flaggedAt: user.flaggedAt || null,
+        team: myTeam ? {
+          _id: myTeam._id,
+          teamName: myTeam.teamName,
+          hackathon: myTeam.hackathon,
+          isFlagged: Boolean(myTeam.isFlagged),
+          flagReason: myTeam.flagReason || '',
+          flaggedAt: myTeam.flaggedAt || null,
+          isLeader: myTeam.leader?.toString() === user._id.toString(),
+        } : null,
+      },
+    });
+  } catch (error) {
+    console.error('Google Junior OAuth error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Google authentication failed',
@@ -837,6 +980,7 @@ module.exports = {
   getUserProfile,
   updateUserProfile,
   googleAuth,
+  googleJuniorAuth,
   sendRegistrationOtp,
   verifyOtpAndRegister,
   sendForgotPasswordOtp,

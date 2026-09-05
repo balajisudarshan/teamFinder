@@ -117,6 +117,18 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.data?.message || 'Google authentication failed');
   };
 
+  const registerJuniorWithGoogle = async (juniorData) => {
+    const res = await api.post('/auth/google-junior', juniorData);
+    if (res.data?.success) {
+      const { token: receivedToken, user: receivedUser } = res.data;
+      localStorage.setItem('teamfinder_token', receivedToken);
+      setToken(receivedToken);
+      setUser(receivedUser);
+      return receivedUser;
+    }
+    throw new Error(res.data?.message || 'Google registration failed');
+  };
+
   const sendOtp = async (rollNumber, personalEmail) => {
     const res = await api.post('/auth/send-otp', { rollNumber, personalEmail });
     if (res.data?.success) {
@@ -218,6 +230,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         loginWithGoogle,
+        registerJuniorWithGoogle,
         sendOtp,
         verifyOtpRegister,
         sendForgotPasswordOtp,
