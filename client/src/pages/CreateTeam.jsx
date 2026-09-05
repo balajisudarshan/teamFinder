@@ -212,7 +212,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-slate-700">
-                    Problem Domain / Theme or PS Code: *
+                    PS Code (from <a href='https://sih.gov.in/sih2026PS'>https://sih.gov.in/sih2026PS</a>) * ;
                   </label>
                   <span className="text-[10px] text-slate-400">Click a preset or type custom</span>
                 </div>
@@ -242,8 +242,8 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
                       key={domain}
                       onClick={() => setFormData((prev) => ({ ...prev, problemDomain: domain }))}
                       className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${formData.problemDomain === domain
-                          ? 'bg-slate-900 text-white border-slate-900 font-semibold'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-slate-900 text-white border-slate-900 font-semibold'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                         }`}
                     >
                       {domain}
@@ -329,8 +329,8 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
                           key={skill}
                           onClick={toggleSkill}
                           className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors flex items-center gap-1 ${isSelected
-                              ? 'bg-slate-900 text-white border-slate-900 font-semibold'
-                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                            ? 'bg-slate-900 text-white border-slate-900 font-semibold'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
                             }`}
                         >
                           <span>{isSelected ? '✓' : '+'}</span>
