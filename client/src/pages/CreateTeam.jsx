@@ -186,7 +186,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
                     required
                     value={formData.teamName}
                     onChange={handleChange}
-                    placeholder="e.g. AgriVision NBKR, CyberShield..."
+                    placeholder="e.g. kumbha rashii.., nbkr nathulu"
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
                   />
                 </div>
@@ -255,7 +255,7 @@ export default function CreateTeam({ setActivePage, onSelectTeam, onSuccess }) {
               {/* Project Description */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700">
-                  Project Description / Concept:
+                  Selected Project Description ( https://sih.gov.in/sih2026PS ):
                 </label>
                 <textarea
                   name="description"
