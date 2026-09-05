@@ -15,6 +15,7 @@ import MyTeams from './pages/MyTeams';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import FlaggedAlertModal from './components/FlaggedAlertModal';
+import HelpBanner from './components/HelpBanner';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 
 function MainApp() {
@@ -109,6 +110,9 @@ function MainApp() {
 
       {/* Flagged Alert Modal - Displayed immediately when logged in or upon action if flagged */}
       <FlaggedAlertModal />
+
+      {/* Global Help & Support Banner */}
+      <HelpBanner />
 
       {/* Navigation */}
       <Navbar activePage={activePage} setActivePage={setActivePage} />

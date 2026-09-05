@@ -11,7 +11,8 @@ import {
   X,
   Layers,
   Bell,
-  AlertTriangle
+  AlertTriangle,
+  HelpCircle
 } from 'lucide-react';
 
 export default function Navbar({ activePage, setActivePage }) {
@@ -149,6 +150,15 @@ export default function Navbar({ activePage, setActivePage }) {
                 <span>Coordinator Desk</span>
               </button>
             )}
+
+            <button
+              onClick={() => window.dispatchEvent(new Event('open-help-modal'))}
+              className="px-2.5 py-1.5 rounded-md text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 transition-colors flex items-center gap-1.5 text-xs font-medium"
+              title="Help & Coordinator Contact"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Help</span>
+            </button>
           </nav>
 
           {/* Desktop Right Side / Auth */}
@@ -291,6 +301,17 @@ export default function Navbar({ activePage, setActivePage }) {
               Coordinator Desk
             </button>
           )}
+
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              window.dispatchEvent(new Event('open-help-modal'));
+            }}
+            className="w-full text-left px-3 py-2 rounded-md font-medium text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 mt-1"
+          >
+            <HelpCircle className="w-4 h-4 text-indigo-500" />
+            <span>Help Desk & Contact Info</span>
+          </button>
           <div className="pt-3 mt-2 border-t border-slate-100">
             {isAuthenticated ? (
               <button

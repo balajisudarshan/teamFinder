@@ -101,8 +101,8 @@ export default function FlaggedAlertModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={`bg-white rounded-2xl max-w-lg w-full shadow-2xl border-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] ${isFlagged ? 'border-rose-500' : 'border-amber-500'
+    <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md overflow-y-auto flex items-center justify-center py-10 sm:py-14 px-4 sm:px-6">
+      <div className={`bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full shadow-2xl border-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col my-auto max-h-[88vh] ${isFlagged ? 'border-rose-500' : 'border-amber-500'
         }`}>
 
         {/* Header Alert Strip */}

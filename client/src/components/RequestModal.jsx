@@ -28,29 +28,29 @@ export default function RequestModal({ team, isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full shadow-lg border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-md flex items-center justify-center py-10 sm:py-14 px-4 sm:px-6">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 sm:px-7 pt-6 pb-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white dark:from-slate-850 dark:to-slate-900">
           <div>
-            <h3 className="font-bold text-slate-900 text-sm">
+            <h3 className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">
               Send Join Request
             </h3>
-            <p className="text-xs text-slate-500">
-              Applying to <strong className="text-slate-900">{team.teamName}</strong> ({team.hackathon})
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Applying to <strong className="text-slate-900 dark:text-slate-200">{team.teamName}</strong> ({team.hackathon})
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-200/60 transition-colors"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        {/* Form Body with generous padding */}
+        <form onSubmit={handleSubmit} className="px-6 sm:px-7 pt-5 pb-7 space-y-5">
           
           {/* Important Rule Notice */}
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200/90 text-xs text-amber-900 flex items-start gap-2.5">
