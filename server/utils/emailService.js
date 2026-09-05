@@ -1,4 +1,10 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Fallback to public DNS to prevent lookup ETIMEDOUT on cloud providers like Render
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {}
 
 let transporter = null;
 
@@ -7,12 +13,14 @@ const getTransporter = () => {
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
     const port = Number(process.env.SMTP_PORT) || 587;
     const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const rawPass = process.env.SMTP_PASS;
 
-    if (!user || !pass) {
-      console.warn('⚠️ SMTP credentials not configured in environment variables. Emails will be logged to console in dev mode.');
+    if (!user || !rawPass) {
       return null;
     }
+
+    // Strip any spaces from the 16-character Google App Password (e.g. 'mpmj cxpw zaix iqzn' -> 'mpmjcxpwzaixiqzn')
+    const pass = rawPass.replace(/\s+/g, '');
 
     transporter = nodemailer.createTransport({
       host,
@@ -22,18 +30,93 @@ const getTransporter = () => {
         user,
         pass,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   }
   return transporter;
 };
 
 /**
- * Send 6-digit OTP for 1st Year / Newcomer Registration
+ * Universal Email Sender:
+ * 1. Uses Brevo REST API (HTTPS port 443) if BREVO_API_KEY is present (100% works on Render free tier).
+ * 2. Uses Resend REST API (HTTPS port 443) if RESEND_API_KEY is present.
+ * 3. Falls back to Nodemailer SMTP.
  */
-const sendRegistrationOtpEmail = async ({ toEmail, rollNumber, otp }) => {
+const sendMail = async ({ toEmail, subject, htmlContent }) => {
+  // Option A: Brevo HTTP API (Recommended for Render free tier, no custom domain needed)
+  if (process.env.BREVO_API_KEY) {
+    const senderEmail = process.env.BREVO_SENDER || process.env.SMTP_USER || 'gadiparthieswar2@gmail.com';
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: 'NBKRIST TeamFinder',
+          email: senderEmail,
+        },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `Brevo HTTP API failed with status ${res.status}`);
+    }
+    return true;
+  }
+
+  // Option B: Resend HTTP API (HTTPS port 443)
+  if (process.env.RESEND_API_KEY) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'NBKRIST TeamFinder <onboarding@resend.dev>',
+        to: [toEmail],
+        subject,
+        html: htmlContent,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `Resend HTTP API failed with status ${res.status}`);
+    }
+    return true;
+  }
+
+  // Option C: Traditional Nodemailer SMTP (Local development or paid hosting with open SMTP)
   const mailer = getTransporter();
   const from = process.env.SMTP_FROM || `"NBKRIST TeamFinder" <${process.env.SMTP_USER}>`;
 
+  if (!mailer) {
+    console.warn('⚠️ No email provider configured (BREVO_API_KEY, RESEND_API_KEY, or SMTP_USER/PASS).');
+    return false;
+  }
+
+  return await mailer.sendMail({
+    from,
+    to: toEmail,
+    subject,
+    html: htmlContent,
+  });
+};
+
+/**
+ * Send 6-digit OTP for 1st Year / Newcomer Registration
+ */
+const sendRegistrationOtpEmail = async ({ toEmail, rollNumber, otp }) => {
   const htmlContent = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
       <div style="background: #0f172a; padding: 24px 28px; text-align: center;">
@@ -65,28 +148,28 @@ const sendRegistrationOtpEmail = async ({ toEmail, rollNumber, otp }) => {
     </div>
   `;
 
-  if (!mailer) {
-    console.log(`\n========================================`);
-    console.log(`[DEV OTP LOG] Registration for ${rollNumber} (${toEmail}): OTP = ${otp}`);
-    console.log(`========================================\n`);
+  try {
+    const sent = await sendMail({
+      toEmail,
+      subject: `[NBKRIST TeamFinder] Verification Code: ${otp}`,
+      htmlContent,
+    });
+    if (!sent) {
+      console.log(`\n========================================`);
+      console.log(`[DEV OTP LOG] Registration for ${rollNumber} (${toEmail}): OTP = ${otp}`);
+      console.log(`========================================\n`);
+    }
     return true;
+  } catch (err) {
+    console.error(`Failed to deliver OTP email to ${toEmail}:`, err.message);
+    throw err;
   }
-
-  return await mailer.sendMail({
-    from,
-    to: toEmail,
-    subject: `[NBKRIST TeamFinder] Verification Code: ${otp}`,
-    html: htmlContent,
-  });
 };
 
 /**
  * Send 6-digit OTP for Password Reset
  */
 const sendForgotPasswordOtpEmail = async ({ toEmail, name, otp }) => {
-  const mailer = getTransporter();
-  const from = process.env.SMTP_FROM || `"NBKRIST TeamFinder" <${process.env.SMTP_USER}>`;
-
   const htmlContent = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
       <div style="background: #0f172a; padding: 24px 28px; text-align: center;">
@@ -118,19 +201,22 @@ const sendForgotPasswordOtpEmail = async ({ toEmail, name, otp }) => {
     </div>
   `;
 
-  if (!mailer) {
-    console.log(`\n========================================`);
-    console.log(`[DEV OTP LOG] Password Reset for ${toEmail}: OTP = ${otp}`);
-    console.log(`========================================\n`);
+  try {
+    const sent = await sendMail({
+      toEmail,
+      subject: `[NBKRIST TeamFinder] Password Reset OTP: ${otp}`,
+      htmlContent,
+    });
+    if (!sent) {
+      console.log(`\n========================================`);
+      console.log(`[DEV OTP LOG] Password Reset for ${toEmail}: OTP = ${otp}`);
+      console.log(`========================================\n`);
+    }
     return true;
+  } catch (err) {
+    console.error(`Failed to deliver password reset email to ${toEmail}:`, err.message);
+    throw err;
   }
-
-  return await mailer.sendMail({
-    from,
-    to: toEmail,
-    subject: `[NBKRIST TeamFinder] Password Reset OTP: ${otp}`,
-    html: htmlContent,
-  });
 };
 
 module.exports = {
