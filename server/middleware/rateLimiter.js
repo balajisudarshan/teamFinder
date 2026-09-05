@@ -11,6 +11,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: isTestEnv,
+  validate: { xForwardedForHeader: false },
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again after 15 minutes.',

@@ -9,6 +9,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust reverse proxy (Render, AWS, Cloudflare, etc.) for rate limiting and IP headers
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: '*',
