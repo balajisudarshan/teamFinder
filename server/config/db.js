@@ -1,4 +1,11 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Fallback to public DNS servers (Google & Cloudflare) to prevent querySrv ECONNREFUSED on local networks
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {}
+
 
 let isConnected = false;
 let memoryServerInstance = null;

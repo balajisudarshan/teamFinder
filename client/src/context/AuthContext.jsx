@@ -105,6 +105,63 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.data?.message || 'Registration failed');
   };
 
+  const loginWithGoogle = async (credential) => {
+    const res = await api.post('/auth/google', { credential });
+    if (res.data?.success) {
+      const { token: receivedToken, user: receivedUser } = res.data;
+      localStorage.setItem('teamfinder_token', receivedToken);
+      setToken(receivedToken);
+      setUser(receivedUser);
+      return receivedUser;
+    }
+    throw new Error(res.data?.message || 'Google authentication failed');
+  };
+
+  const sendOtp = async (rollNumber, personalEmail) => {
+    const res = await api.post('/auth/send-otp', { rollNumber, personalEmail });
+    if (res.data?.success) {
+      return res.data;
+    }
+    throw new Error(res.data?.message || 'Failed to send OTP');
+  };
+
+  const verifyOtpRegister = async (registrationData) => {
+    const res = await api.post('/auth/verify-otp-register', registrationData);
+    if (res.data?.success) {
+      const { token: receivedToken, user: receivedUser } = res.data;
+      localStorage.setItem('teamfinder_token', receivedToken);
+      setToken(receivedToken);
+      setUser(receivedUser);
+      return receivedUser;
+    }
+    throw new Error(res.data?.message || 'Registration verification failed');
+  };
+
+  const sendForgotPasswordOtp = async (identifier) => {
+    const res = await api.post('/auth/forgot-password-otp', { identifier });
+    if (res.data?.success) {
+      return res.data;
+    }
+    throw new Error(res.data?.message || 'Failed to send reset code');
+  };
+
+  const resetPassword = async (identifier, otp, newPassword) => {
+    const res = await api.post('/auth/reset-password-otp', { identifier, otp, newPassword });
+    if (res.data?.success) {
+      return res.data;
+    }
+    throw new Error(res.data?.message || 'Failed to reset password');
+  };
+
+  const linkGoogle = async (credential) => {
+    const res = await api.post('/auth/link-google', { credential });
+    if (res.data?.success) {
+      setUser((prev) => ({ ...prev, googleId: res.data.user?.googleId }));
+      return res.data;
+    }
+    throw new Error(res.data?.message || 'Failed to link Google account');
+  };
+
   const logout = () => {
     localStorage.removeItem('teamfinder_token');
     setToken(null);
@@ -160,6 +217,12 @@ export const AuthProvider = ({ children }) => {
         activeFlagReason,
         login,
         register,
+        loginWithGoogle,
+        sendOtp,
+        verifyOtpRegister,
+        sendForgotPasswordOtp,
+        resetPassword,
+        linkGoogle,
         logout,
         updateProfile,
         refreshUser,

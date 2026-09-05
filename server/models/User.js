@@ -30,7 +30,9 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: function () {
+        return this.authProvider === 'local';
+      },
       minlength: [6, 'Password must be at least 6 characters'],
     },
     department: {
@@ -61,6 +63,26 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['student', 'admin'],
       default: 'student',
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    googleId: {
+      type: String,
+      sparse: true,
+      default: null,
+    },
+    personalEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      default: null,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: true,
     },
     isFlagged: {
       type: Boolean,

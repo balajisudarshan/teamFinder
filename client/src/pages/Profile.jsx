@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { 
   User, 
@@ -6,11 +7,16 @@ import {
   Hash, 
   CheckCircle2, 
   Save,
-  ShieldCheck 
+  ShieldCheck,
+  Sparkles,
+  Link as LinkIcon
 } from 'lucide-react';
 
 export default function Profile({ onSuccess }) {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, linkGoogle } = useAuth();
+  const [googleLinking, setGoogleLinking] = useState(false);
+  const [googleMsg, setGoogleMsg] = useState('');
+  const [googleErr, setGoogleErr] = useState('');
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -72,7 +78,82 @@ export default function Profile({ onSuccess }) {
             <span className="truncate">{user?.email}</span>
             <span className="text-[10px] text-emerald-700 font-semibold">(Verified Domain)</span>
           </p>
+          {user?.personalEmail && (
+            <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+              <span>Personal:</span>
+              <span className="font-mono text-slate-700">{user.personalEmail}</span>
+            </p>
+          )}
         </div>
+      </div>
+
+      {/* Google Account Association */}
+      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              NBKRIST Google Account
+            </h2>
+          </div>
+          {user?.googleId ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <CheckCircle2 className="w-3 h-3" />
+              Linked with Google
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              Not Linked
+            </span>
+          )}
+        </div>
+
+        {googleMsg && (
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>{googleMsg}</span>
+          </div>
+        )}
+
+        {googleErr && (
+          <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-md text-xs">
+            {googleErr}
+          </div>
+        )}
+
+        {user?.googleId ? (
+          <p className="text-xs text-slate-600">
+            Your profile is linked to your official Google account. You can seamlessly log in with 1-click Google Sign-In.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-slate-600">
+              Link your official <strong>@nbkrist.org</strong> Google account for quick, passwordless access to your account.
+            </p>
+            <div className="pt-1">
+              <GoogleLogin
+                onSuccess={async (cred) => {
+                  setGoogleErr('');
+                  setGoogleMsg('');
+                  setGoogleLinking(true);
+                  try {
+                    const res = await linkGoogle(cred.credential);
+                    setGoogleMsg(res.message || 'Google account linked successfully!');
+                    onSuccess && onSuccess('Google account linked!');
+                  } catch (err) {
+                    setGoogleErr(err.message || 'Failed to link Google account');
+                  } finally {
+                    setGoogleLinking(false);
+                  }
+                }}
+                onError={() => setGoogleErr('Google account selection canceled or failed')}
+                theme="outline"
+                size="medium"
+                text="continue_with"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Profile Form */}
