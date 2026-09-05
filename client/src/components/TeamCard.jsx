@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import SIHBadge from './SIHBadge';
-import { 
-  Users, 
-  Crown, 
-  ArrowRight, 
-  Check, 
+import {
+  Users,
+  Crown,
+  ArrowRight,
+  Check,
   ChevronRight,
   Share2,
   Copy
@@ -40,7 +40,7 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
     }
 
     if (navigator.share) {
-      navigator.share({ title: team.teamName, text: shareText, url: teamUrl }).catch(() => {});
+      navigator.share({ title: team.teamName, text: shareText, url: teamUrl }).catch(() => { });
     } else {
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
       window.open(waUrl, '_blank', 'noopener,noreferrer');
@@ -49,12 +49,12 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
 
   return (
     <div className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl shadow-xs transition-all flex flex-col justify-between overflow-hidden">
-      
+
       {/* Top Header */}
       <div className="p-4 border-b border-slate-100 space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h3 
+            <h3
               onClick={() => onSelectTeam(team)}
               className="font-bold text-base text-slate-900 hover:text-blue-700 transition-colors cursor-pointer truncate"
               title={team.teamName}
@@ -62,7 +62,7 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
               {team.teamName}
             </h3>
             <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
-              Domain: {team.problemDomain}
+              Ps ID: {team.problemDomain}
             </p>
           </div>
 
@@ -73,11 +73,10 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
               </span>
             ) : (
               <span
-                className={`px-2 py-0.5 rounded text-[11px] font-medium shrink-0 ${
-                  isFull
-                    ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
-                }`}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium shrink-0 ${isFull
+                  ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
+                  }`}
               >
                 {team.status === 'full' ? 'Team Full' : 'Looking for peers'}
               </span>
@@ -99,7 +98,7 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
 
       {/* Body Content */}
       <div className="p-4 space-y-3.5 flex-1 text-xs">
-        
+
         {/* Description snippet */}
         {team.description ? (
           <p className="text-slate-600 leading-relaxed line-clamp-2">
@@ -139,9 +138,8 @@ export default function TeamCard({ team, onSelectTeam, onRequestJoin }) {
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${
-                isFull ? 'bg-slate-500' : 'bg-slate-800'
-              }`}
+              className={`h-full rounded-full transition-all ${isFull ? 'bg-slate-500' : 'bg-slate-800'
+                }`}
               style={{ width: `${percentage}%` }}
             />
           </div>
