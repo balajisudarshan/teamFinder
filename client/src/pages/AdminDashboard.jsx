@@ -62,7 +62,7 @@ function PaginationBar({ currentPage, totalPages, totalItems, pageSize, onPageCh
   );
 }
 
-export default function AdminDashboard({ onSelectTeam, onSuccess }) {
+export default function AdminDashboard({ onSelectTeam, onSuccess, setActivePage }) {
   const [stats, setStats] = useState(null);
   const [teams, setTeams] = useState([]);
   const [students, setStudents] = useState([]);
@@ -446,41 +446,57 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 text-xs">
-        <button
-          onClick={() => setActiveTab('teams')}
-          className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === 'teams'
-              ? 'border-slate-900 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>All Registered Teams ({teams.length})</span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 text-xs">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('teams')}
+            className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'teams'
+                ? 'border-slate-900 text-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>All Registered Teams ({teams.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('students')}
-          className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === 'students'
-              ? 'border-slate-900 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Student Directory ({students.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('students')}
+            className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'students'
+                ? 'border-slate-900 text-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Student Directory ({students.length})</span>
+          </button>
 
+          <button
+            onClick={() => setActiveTab('applications')}
+            className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'applications'
+                ? 'border-slate-900 text-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ClipboardList className="w-3.5 h-3.5" />
+            <span>Applications ({applications.length})</span>
+          </button>
+        </div>
+
+        {/* Quick Access to New Roster & Allocation Page */}
         <button
-          onClick={() => setActiveTab('applications')}
-          className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === 'applications'
-              ? 'border-slate-900 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+          type="button"
+          onClick={() => {
+            if (setActivePage) setActivePage('admin-roster');
+            else window.location.hash = '#/admin-roster';
+          }}
+          className="mb-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md font-semibold text-xs transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          title="Open dedicated User & Team Allocation Directory with Accordion View"
         >
-          <ClipboardList className="w-3.5 h-3.5" />
-          <span>Applications ({applications.length})</span>
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Open User & Team Roster Directory &rarr;</span>
         </button>
       </div>
 
@@ -675,6 +691,34 @@ export default function AdminDashboard({ onSelectTeam, onSuccess }) {
       {/* Tab 2: Students Directory */}
       {activeTab === 'students' && (
         <div className="space-y-3">
+          
+          {/* Banner pointing to User & Team Roster Directory */}
+          <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-indigo-950 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 shrink-0">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div>
+                <p className="font-bold text-indigo-950">
+                  New: User & Team Allocation Directory Available
+                </p>
+                <p className="text-[11px] text-indigo-700">
+                  Display students with their assigned teams, sort by team name and members, or view interactive team accordions with caching and pagination.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (setActivePage) setActivePage('admin-roster');
+                else window.location.hash = '#/admin-roster';
+              }}
+              className="self-start sm:self-auto px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-semibold text-xs transition-colors shrink-0 shadow-2xs cursor-pointer flex items-center gap-1"
+            >
+              <span>Open Roster Directory &rarr;</span>
+            </button>
+          </div>
+
           <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row gap-2.5 items-center justify-between">
             <div className="relative w-full sm:w-72">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

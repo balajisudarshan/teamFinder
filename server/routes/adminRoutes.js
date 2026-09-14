@@ -5,6 +5,7 @@ const {
   getAllStudents,
   getAllTeams,
   getAllApplications,
+  getAdminRoster,
   exportTeamsExcel,
   toggleUserFlag,
   toggleTeamFlag,
@@ -22,6 +23,7 @@ router.get('/stats', getAdminStats);
 router.get('/students', getAllStudents);
 router.get('/teams', getAllTeams);
 router.get('/applications', getAllApplications);
+router.get('/roster', getAdminRoster);
 router.get('/export-excel', exportTeamsExcel);
 
 // Flag / Unflag routes

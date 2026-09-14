@@ -14,6 +14,7 @@ import CreateTeam from './pages/CreateTeam';
 import MyTeams from './pages/MyTeams';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminRoster from './pages/AdminRoster';
 import FlaggedAlertModal from './components/FlaggedAlertModal';
 import HelpBanner from './components/HelpBanner';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
@@ -27,7 +28,10 @@ function MainApp() {
       const id = raw.replace('team/', '');
       return { page: 'team-details', teamId: id };
     }
-    const validPages = ['home', 'teams', 'team-details', 'create-team', 'my-teams', 'profile', 'admin', 'login', 'register'];
+    if (raw === 'admin/roster' || raw === 'roster' || raw === 'admin-roster') {
+      return { page: 'admin-roster', teamId: null };
+    }
+    const validPages = ['home', 'teams', 'team-details', 'create-team', 'my-teams', 'profile', 'admin', 'admin-roster', 'login', 'register'];
     if (validPages.includes(raw)) {
       return { page: raw, teamId: null };
     }
@@ -214,11 +218,33 @@ function MainApp() {
             <AdminDashboard
               onSelectTeam={handleSelectTeam}
               onSuccess={showToast}
+              setActivePage={setActivePage}
             />
           ) : (
             <div className="max-w-md mx-auto py-16 text-center space-y-3">
               <h2 className="text-base font-bold text-slate-900">Access Restricted</h2>
               <p className="text-xs text-slate-500">Administrator privileges required to view the coordinator desk.</p>
+              <button
+                onClick={() => setActivePage('home')}
+                className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-semibold"
+              >
+                Return to Home
+              </button>
+            </div>
+          )
+        )}
+
+        {activePage === 'admin-roster' && (
+          isAdmin ? (
+            <AdminRoster
+              onSelectTeam={handleSelectTeam}
+              onSuccess={showToast}
+              setActivePage={setActivePage}
+            />
+          ) : (
+            <div className="max-w-md mx-auto py-16 text-center space-y-3">
+              <h2 className="text-base font-bold text-slate-900">Access Restricted</h2>
+              <p className="text-xs text-slate-500">Administrator privileges required to view the allocation directory.</p>
               <button
                 onClick={() => setActivePage('home')}
                 className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-semibold"

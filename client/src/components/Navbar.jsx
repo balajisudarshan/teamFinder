@@ -139,16 +139,30 @@ export default function Navbar({ activePage, setActivePage }) {
             )}
 
             {isAdmin && (
-              <button
-                onClick={() => handleNav('admin')}
-                className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${activePage === 'admin'
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
-                  }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Coordinator Desk</span>
-              </button>
+              <>
+                <button
+                  onClick={() => handleNav('admin')}
+                  className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${activePage === 'admin'
+                    ? 'bg-slate-900 text-white font-semibold'
+                    : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+                    }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Coordinator Desk</span>
+                </button>
+
+                <button
+                  onClick={() => handleNav('admin-roster')}
+                  className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${activePage === 'admin-roster'
+                    ? 'bg-slate-900 text-white font-semibold'
+                    : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+                    }`}
+                  title="Users & Teams Allocation Directory"
+                >
+                  <Users className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Roster Directory</span>
+                </button>
+              </>
             )}
 
             <button
@@ -294,12 +308,22 @@ export default function Navbar({ activePage, setActivePage }) {
             </>
           )}
           {isAdmin && (
-            <button
-              onClick={() => handleNav('admin')}
-              className="w-full text-left px-3 py-2 rounded-md font-semibold text-white bg-slate-900 mt-1"
-            >
-              Coordinator Desk
-            </button>
+            <>
+              <button
+                onClick={() => handleNav('admin')}
+                className="w-full text-left px-3 py-2 rounded-md font-semibold text-white bg-slate-900 mt-1 flex items-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Coordinator Desk</span>
+              </button>
+              <button
+                onClick={() => handleNav('admin-roster')}
+                className="w-full text-left px-3 py-2 rounded-md font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 mt-1 flex items-center gap-2"
+              >
+                <Users className="w-4 h-4 text-indigo-600" />
+                <span>Roster & Allocation Directory</span>
+              </button>
+            </>
           )}
 
           <button

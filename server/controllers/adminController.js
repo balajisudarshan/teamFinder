@@ -287,6 +287,7 @@ const toggleUserFlag = async (req, res) => {
     user.flaggedAt = user.isFlagged ? new Date() : null;
 
     await user.save();
+    invalidateRosterCache();
 
     res.json({
       success: true,
@@ -332,6 +333,7 @@ const toggleTeamFlag = async (req, res) => {
     team.flaggedAt = team.isFlagged ? new Date() : null;
 
     await team.save();
+    invalidateRosterCache();
 
     res.json({
       success: true,
@@ -365,6 +367,7 @@ const deleteTeamByAdmin = async (req, res) => {
 
     // Delete the team document
     await Team.findByIdAndDelete(team._id);
+    invalidateRosterCache();
 
     res.json({
       success: true,
@@ -418,6 +421,7 @@ const deleteUserByAdmin = async (req, res) => {
 
     // 4. Delete the user
     await User.findByIdAndDelete(user._id);
+    invalidateRosterCache();
 
     res.json({
       success: true,
@@ -453,16 +457,176 @@ const deleteApplicationByAdmin = async (req, res) => {
   }
 };
 
+// In-memory cache for admin roster with TTL
+let rosterCache = {
+  data: null,
+  timestamp: 0,
+};
+const ROSTER_CACHE_TTL = 30 * 1000; // 30 seconds server cache TTL
+
+const invalidateRosterCache = () => {
+  rosterCache = { data: null, timestamp: 0 };
+};
+
+// @desc    Get comprehensive roster: all students mapped with teams, and all teams with member rosters
+// @route   GET /api/admin/roster
+// @access  Private (Admin only)
+const getAdminRoster = async (req, res) => {
+  try {
+    const { refresh } = req.query;
+    const now = Date.now();
+
+    if (!refresh && rosterCache.data && now - rosterCache.timestamp < ROSTER_CACHE_TTL) {
+      return res.json({
+        success: true,
+        cached: true,
+        cachedAt: new Date(rosterCache.timestamp).toISOString(),
+        ...rosterCache.data,
+      });
+    }
+
+    const [students, teams] = await Promise.all([
+      User.find({ role: 'student' })
+        .select('-password')
+        .sort({ name: 1 })
+        .lean(),
+      Team.find()
+        .populate('leader', 'name rollNumber email department year gender skills isFlagged')
+        .populate('members', 'name rollNumber email department year gender skills isFlagged')
+        .sort({ teamName: 1 })
+        .lean(),
+    ]);
+
+    // Build a lookup map of student ID -> Array of teams with their role in that team
+    const studentTeamMap = {};
+
+    // Process teams and member rosters
+    const enrichedTeams = teams.map((team) => {
+      const leaderId = team.leader?._id ? team.leader._id.toString() : (team.leader ? team.leader.toString() : null);
+      const members = team.members || [];
+      const memberCount = members.length;
+      const isFull = memberCount >= (team.requiredMembers || 6);
+
+      // Check if team has at least one female member
+      const hasFemale = members.some((m) => m && m.gender === 'Female') || (team.leader && team.leader.gender === 'Female');
+
+      // Tag members
+      members.forEach((m) => {
+        if (!m || !m._id) return;
+        const mId = m._id.toString();
+        const role = mId === leaderId ? 'Leader' : 'Member';
+
+        if (!studentTeamMap[mId]) {
+          studentTeamMap[mId] = [];
+        }
+        studentTeamMap[mId].push({
+          teamId: team._id,
+          teamName: team.teamName,
+          hackathon: team.hackathon,
+          problemDomain: team.problemDomain,
+          status: team.status,
+          role,
+          isFull,
+          requiredMembers: team.requiredMembers || 6,
+          memberCount,
+          isFlagged: team.isFlagged,
+        });
+      });
+
+      // Ensure leader is counted if not already in studentTeamMap for this team
+      if (leaderId && (!studentTeamMap[leaderId] || !studentTeamMap[leaderId].some((t) => t.teamId.toString() === team._id.toString()))) {
+        if (!studentTeamMap[leaderId]) {
+          studentTeamMap[leaderId] = [];
+        }
+        studentTeamMap[leaderId].push({
+          teamId: team._id,
+          teamName: team.teamName,
+          hackathon: team.hackathon,
+          problemDomain: team.problemDomain,
+          status: team.status,
+          role: 'Leader',
+          isFull,
+          requiredMembers: team.requiredMembers || 6,
+          memberCount,
+          isFlagged: team.isFlagged,
+        });
+      }
+
+      return {
+        ...team,
+        memberCount,
+        isFull,
+        hasFemale,
+      };
+    });
+
+    // Enrich students with their assigned teams
+    const enrichedStudents = students.map((student) => {
+      const sId = student._id.toString();
+      const assignedTeams = studentTeamMap[sId] || [];
+      const isAssigned = assignedTeams.length > 0;
+      const primaryTeam = assignedTeams[0] || null;
+
+      return {
+        ...student,
+        teams: assignedTeams,
+        isAssigned,
+        teamName: primaryTeam ? primaryTeam.teamName : null,
+        teamRole: primaryTeam ? primaryTeam.role : null,
+        primaryTeam,
+      };
+    });
+
+    const unassignedStudents = enrichedStudents.filter((s) => !s.isAssigned);
+    const assignedStudents = enrichedStudents.filter((s) => s.isAssigned);
+
+    const stats = {
+      totalStudents: enrichedStudents.length,
+      assignedStudents: assignedStudents.length,
+      unassignedStudents: unassignedStudents.length,
+      totalTeams: enrichedTeams.length,
+      fullTeams: enrichedTeams.filter((t) => t.isFull).length,
+      recruitingTeams: enrichedTeams.filter((t) => !t.isFull).length,
+      sihTeams: enrichedTeams.filter((t) => /sih|smart india/i.test(t.hackathon || '')).length,
+    };
+
+    const responsePayload = {
+      stats,
+      students: enrichedStudents,
+      teams: enrichedTeams,
+      unassignedCount: unassignedStudents.length,
+    };
+
+    // Store in cache
+    rosterCache = {
+      data: responsePayload,
+      timestamp: now,
+    };
+
+    res.json({
+      success: true,
+      cached: false,
+      cachedAt: new Date(now).toISOString(),
+      ...responsePayload,
+    });
+  } catch (error) {
+    console.error('Admin get roster error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAdminStats,
   getAllStudents,
   getAllTeams,
   getAllApplications,
+  getAdminRoster,
   exportTeamsExcel,
   toggleUserFlag,
   toggleTeamFlag,
   deleteTeamByAdmin,
   deleteUserByAdmin,
   deleteApplicationByAdmin,
+  invalidateRosterCache,
 };
 
