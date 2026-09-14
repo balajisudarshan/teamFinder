@@ -16,14 +16,16 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/adminMiddleware');
 
-// All admin routes require both JWT protection and admin role
+// Roster directory view is accessible to authenticated users (team leaders, students, admins)
+router.get('/roster', protect, getAdminRoster);
+
+// All other coordinator management routes require administrator privileges
 router.use(protect, adminOnly);
 
 router.get('/stats', getAdminStats);
 router.get('/students', getAllStudents);
 router.get('/teams', getAllTeams);
 router.get('/applications', getAllApplications);
-router.get('/roster', getAdminRoster);
 router.get('/export-excel', exportTeamsExcel);
 
 // Flag / Unflag routes

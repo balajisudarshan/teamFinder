@@ -35,25 +35,36 @@ app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
+const http = require('http');
+const { initSocket } = require('./socket');
+
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+initSocket(server);
+
 // Start server
 const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 NBKRIST TeamFinder Backend running on port ${PORT}`);
       console.log(`🌐 Base URL: http://localhost:${PORT}/api`);
+      console.log(`⚡ WebSocket Server initialized on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
 };
+
 
 startServer();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import RequestModal from './components/RequestModal';
@@ -55,6 +56,18 @@ function MainApp() {
       setToastMessage('');
     }, 4500);
   };
+
+  // Real-time notification toast listener
+  useEffect(() => {
+    const handleTeamNotif = (e) => {
+      const detail = e.detail;
+      if (detail?.message) {
+        showToast(`${detail.title ? detail.title + ': ' : ''}${detail.message}`);
+      }
+    };
+    window.addEventListener('team-notification', handleTeamNotif);
+    return () => window.removeEventListener('team-notification', handleTeamNotif);
+  }, []);
 
   const setActivePage = (page) => {
     setActivePageState(page);
@@ -119,7 +132,7 @@ function MainApp() {
       <HelpBanner />
 
       {/* Navigation */}
-      <Navbar activePage={activePage} setActivePage={setActivePage} />
+      <Navbar activePage={activePage} setActivePage={setActivePage} onSuccess={showToast} />
 
       {/* Flagged Account Warning Banner */}
       {isAuthenticated && isFlagged && (
@@ -235,7 +248,7 @@ function MainApp() {
         )}
 
         {activePage === 'admin-roster' && (
-          isAdmin ? (
+          (isAdmin || isAuthenticated) ? (
             <AdminRoster
               onSelectTeam={handleSelectTeam}
               onSuccess={showToast}
@@ -243,13 +256,13 @@ function MainApp() {
             />
           ) : (
             <div className="max-w-md mx-auto py-16 text-center space-y-3">
-              <h2 className="text-base font-bold text-slate-900">Access Restricted</h2>
-              <p className="text-xs text-slate-500">Administrator privileges required to view the allocation directory.</p>
+              <h2 className="text-base font-bold text-slate-900">Sign In Required</h2>
+              <p className="text-xs text-slate-500">Please sign in with your NBKRIST college account to access the roster directory.</p>
               <button
-                onClick={() => setActivePage('home')}
-                className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-semibold"
+                onClick={() => setActivePage('login')}
+                className="px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-semibold cursor-pointer"
               >
-                Return to Home
+                Sign In &rarr;
               </button>
             </div>
           )
@@ -291,7 +304,9 @@ function MainApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <NotificationProvider>
+        <MainApp />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

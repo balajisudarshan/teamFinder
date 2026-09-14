@@ -10,15 +10,22 @@ import {
   Send,
   PlusCircle,
   Inbox,
-  AlertTriangle
+  AlertTriangle,
+  MailCheck,
+  UserPlus,
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 import SIHBadge from '../components/SIHBadge';
+import InviteMembersModal from '../components/InviteMembersModal';
 
 export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
   const { user } = useAuth();
   const [leadingTeams, setLeadingTeams] = useState([]);
+  const [inviteModalTeam, setInviteModalTeam] = useState(null);
   const [memberTeams, setMemberTeams] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
+  const [receivedInvitations, setReceivedInvitations] = useState([]);
   const [teamRequests, setTeamRequests] = useState({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -47,9 +54,16 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
         setTeamRequests(requestsMap);
       }
 
-      const sentRes = await api.get('/requests/my/sent');
+      const [sentRes, invitesRes] = await Promise.all([
+        api.get('/requests/my/sent').catch(() => ({ data: { requests: [] } })),
+        api.get('/requests/my/invitations').catch(() => ({ data: { invitations: [] } })),
+      ]);
+
       if (sentRes.data?.success) {
         setSentRequests(sentRes.data.requests || []);
+      }
+      if (invitesRes.data?.success) {
+        setReceivedInvitations(invitesRes.data.invitations || []);
       }
     } catch (err) {
       console.error('Error fetching my teams data:', err);
@@ -60,7 +74,25 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
 
   useEffect(() => {
     fetchData();
+    const handleNotif = () => fetchData();
+    window.addEventListener('team-notification', handleNotif);
+    return () => window.removeEventListener('team-notification', handleNotif);
   }, []);
+
+  const handleRespondInvitation = async (inviteId, action) => {
+    setActionLoading(true);
+    try {
+      const res = await api.put(`/requests/invitations/${inviteId}/respond`, { action });
+      if (res.data?.success) {
+        onSuccess && onSuccess(res.data.message);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || `Failed to ${action} invitation`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleRespondRequest = async (requestId, action, teamId) => {
     setActionLoading(true);
@@ -156,6 +188,29 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
           <Send className="w-3.5 h-3.5" />
           <span>My Sent Requests ({sentRequests.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('invitations')}
+          className={`pb-2.5 px-3 font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'invitations'
+              ? 'border-slate-900 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <MailCheck className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Team Invitations</span>
+          {receivedInvitations.filter((i) => i.status === 'pending').length > 0 && (
+            <span className="flex items-center gap-1.5 ml-0.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+              </span>
+              <span className="px-1.5 py-0.2 text-[10px] font-bold bg-indigo-600 text-white rounded-full leading-tight">
+                {receivedInvitations.filter((i) => i.status === 'pending').length}
+              </span>
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Tab 1: Teams I Lead */}
@@ -204,12 +259,24 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => onSelectTeam(team)}
-                      className="self-start md:self-auto px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-medium rounded-md"
-                    >
-                      View Team Page
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+                      {(team.members?.length || 0) < (team.requiredMembers || 6) && (
+                        <button
+                          onClick={() => setInviteModalTeam(team)}
+                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-md shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                          title="Invite unallocated students to join your team"
+                        >
+                          <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Invite Unallocated Members &rarr;</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onSelectTeam(team)}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-medium rounded-md cursor-pointer"
+                      >
+                        View Team Page
+                      </button>
+                    </div>
                   </div>
 
                   {team.isFlagged && (
@@ -495,6 +562,123 @@ export default function MyTeams({ setActivePage, onSelectTeam, onSuccess }) {
         </div>
       )}
 
+      {/* Tab 4: Team Invitations Received */}
+      {activeTab === 'invitations' && (
+        <div className="space-y-4">
+          <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 shrink-0 mt-0.5">
+              <MailCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-indigo-950">Team Invitations for You</h3>
+              <p className="text-xs text-indigo-800 mt-0.5 leading-relaxed">
+                Team leaders who have open slots have invited you to join their SIH project. Accept an invitation to join the team, or decline to stay available.
+              </p>
+            </div>
+          </div>
+
+          {receivedInvitations.length === 0 ? (
+            <div className="bg-white rounded-xl p-12 border border-slate-200 text-center space-y-2 shadow-2xs">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                <MailCheck className="w-5 h-5" />
+              </div>
+              <h3 className="font-semibold text-slate-800 text-sm">No invitations yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                When a team leader invites you to their team, the invitation and their personal message will appear here.
+              </p>
+              <button
+                onClick={() => setActivePage('teams')}
+                className="mt-3 px-3.5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-semibold cursor-pointer"
+              >
+                Browse Open Teams &rarr;
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {receivedInvitations.map((inv) => (
+                <div
+                  key={inv._id}
+                  className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-3 transition-all hover:border-slate-300"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-base font-bold text-slate-900">{inv.team?.teamName || 'Team'}</h4>
+                        {inv.team?.hackathon && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            {inv.team.hackathon}
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize ${
+                          inv.status === 'accepted'
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : inv.status === 'rejected'
+                            ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                            : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        }`}>
+                          {inv.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Domain: <strong className="text-slate-800">{inv.team?.problemDomain || 'General'}</strong> • Leader: <strong className="text-slate-800">{inv.team?.leader?.name || inv.sender?.name}</strong>
+                      </p>
+                    </div>
+
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {new Date(inv.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+
+                  {/* Leader message */}
+                  {inv.message && (
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-xs text-slate-700 space-y-1">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        <MessageSquare className="w-3 h-3 text-indigo-500" />
+                        <span>Message from Team Leader</span>
+                      </div>
+                      <p className="italic leading-relaxed">"{inv.message}"</p>
+                    </div>
+                  )}
+
+                  {/* Actions if pending */}
+                  {inv.status === 'pending' && (
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => handleRespondInvitation(inv._id, 'reject')}
+                        disabled={actionLoading}
+                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => handleRespondInvitation(inv._id, 'accept')}
+                        disabled={actionLoading}
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Accept Invitation & Join Team</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Invite Unallocated Members Modal */}
+      <InviteMembersModal
+        isOpen={!!inviteModalTeam}
+        team={inviteModalTeam}
+        onClose={() => setInviteModalTeam(null)}
+        onSuccess={(msg) => {
+          onSuccess && onSuccess(msg);
+          fetchData();
+        }}
+      />
+
     </div>
   );
 }
+

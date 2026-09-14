@@ -14,9 +14,12 @@ import {
   AlertTriangle,
   HelpCircle
 } from 'lucide-react';
+import { useNotifications } from '../context/NotificationContext';
+import NotificationDropdown from './NotificationDropdown';
 
-export default function Navbar({ activePage, setActivePage }) {
+export default function Navbar({ activePage, setActivePage, onSuccess }) {
   const { user, isAuthenticated, isAdmin, logout, isFlagged, isTeamFlagged } = useAuth();
+  const { unreadCount, redDotActive, toggleDropdown, isDropdownOpen } = useNotifications();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -179,6 +182,41 @@ export default function Navbar({ activePage, setActivePage }) {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
+                
+                {/* Real-time Notification Tab / Bell */}
+                <div className="relative">
+                  <button
+                    onClick={toggleDropdown}
+                    className={`relative p-2 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      isDropdownOpen
+                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                    title="Notifications"
+                  >
+                    <Bell className="w-4 h-4 text-slate-700" />
+                    <span className="text-xs font-semibold hidden lg:inline">Notifications</span>
+
+                    {/* Red dot animation when invitation or notification arrives */}
+                    {redDotActive && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600 border-2 border-white shadow-xs"></span>
+                      </span>
+                    )}
+
+                    {/* Unread count pill if count > 0 and not pinging */}
+                    {!redDotActive && unreadCount > 0 && (
+                      <span className="px-1.5 py-0.2 text-[10px] font-bold bg-rose-600 text-white rounded-full leading-tight">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown panel */}
+                  <NotificationDropdown setActivePage={handleNav} onSuccess={onSuccess} />
+                </div>
+
                 {(isFlagged || isTeamFlagged) && (
                   <button
                     type="button"
@@ -234,11 +272,32 @@ export default function Navbar({ activePage, setActivePage }) {
             )}
           </div>
 
-          {/* Mobile menu toggle */}
-          <div className="flex items-center md:hidden">
+          {/* Mobile menu toggle & Mobile Notification Button */}
+          <div className="flex items-center gap-1 md:hidden">
+            {isAuthenticated && (
+              <button
+                onClick={toggleDropdown}
+                className="relative p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5 text-slate-700" />
+                {redDotActive && (
+                  <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600 border border-white"></span>
+                  </span>
+                )}
+                {!redDotActive && unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 px-1 py-0.2 text-[9px] font-bold bg-rose-600 text-white rounded-full leading-tight">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -246,9 +305,38 @@ export default function Navbar({ activePage, setActivePage }) {
         </div>
       </div>
 
+      {/* Mobile Notification Dropdown */}
+      <div className="md:hidden relative">
+        <NotificationDropdown setActivePage={handleNav} onSuccess={onSuccess} />
+      </div>
+
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-2 pb-4 space-y-1 text-sm">
+          {isAuthenticated && (
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                toggleDropdown();
+              }}
+              className="w-full text-left px-3 py-2 rounded-md font-semibold text-slate-800 hover:bg-slate-100 flex items-center justify-between bg-slate-50 border border-slate-200 mb-1.5"
+            >
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-indigo-600" />
+                <span>Notifications</span>
+              </div>
+              {redDotActive ? (
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600 border border-white"></span>
+                </span>
+              ) : unreadCount > 0 ? (
+                <span className="px-2 py-0.5 text-xs font-bold bg-rose-600 text-white rounded-full">
+                  {unreadCount}
+                </span>
+              ) : null}
+            </button>
+          )}
           <button
             onClick={() => handleNav('home')}
             className={`w-full text-left px-3 py-2 rounded-md font-medium ${activePage === 'home' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-700'
